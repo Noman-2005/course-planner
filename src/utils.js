@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 export const DAYS = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
-export const HUES = [256, 190, 330, 32, 150, 8, 48, 280];
+export const HUES = [217, 142, 22, 271, 336, 174, 45, 0];
 
 export const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 export const pad = (n) => String(n).padStart(2, "0");

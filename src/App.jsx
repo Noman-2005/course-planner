@@ -295,19 +295,33 @@ export default function App() {
     }
   }
 
-  async function savePng() {
+    async function savePng(mode) {
     const node = document.querySelector(".capture");
     if (!node) return;
+    const theme = mode || document.documentElement.dataset.theme || "light";
+    let clone;
     try {
       const { toPng } = await import("html-to-image");
-      const bg = getComputedStyle(document.documentElement).getPropertyValue("--card").trim() || "#ffffff";
-      const url = await toPng(node, { pixelRatio: 2, backgroundColor: bg, cacheBust: true });
+      clone = node.cloneNode(true);
+      clone.classList.remove("theme-light", "theme-dark");
+      clone.classList.add("theme-" + theme);
+      Object.assign(clone.style, { position: "fixed", left: "-10000px", top: "0", width: node.offsetWidth + "px" });
+      document.body.appendChild(clone);
+      const bg = getComputedStyle(clone).getPropertyValue("--card").trim() || (theme === "dark" ? "#12152a" : "#ffffff");
+      const url = await toPng(clone, {
+        pixelRatio: 2,
+        backgroundColor: bg,
+        cacheBust: true,
+        style: { position: "static", left: "auto", top: "auto", margin: "0" },
+      });
       const a = document.createElement("a");
       a.href = url;
-      a.download = slug(shownTitle) + ".png";
+      a.download = `${slug(shownTitle)}-${theme}.png`;
       a.click();
     } catch {
       toast("Could not create the PNG");
+    } finally {
+      if (clone) clone.remove();
     }
   }
 
@@ -542,8 +556,11 @@ export default function App() {
               <button className="btn ghost sm" onClick={() => window.print()}>
                 <Icon name="printer" size={14} /> PDF
               </button>
-              <button className="btn primary sm" onClick={savePng}>
-                <Icon name="download" size={14} /> PNG
+                           <button className="btn primary sm" onClick={() => savePng("light")}>
+                <Icon name="sun" size={14} /> PNG Light
+              </button>
+              <button className="btn primary sm" onClick={() => savePng("dark")}>
+                <Icon name="moon" size={14} /> PNG Dark
               </button>
             </div>
           </div>
