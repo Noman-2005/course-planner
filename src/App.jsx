@@ -1,15 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Icon from "./Icon.jsx";
 import Routine from "./Routine.jsx";
 import CourseForm from "./CourseForm.jsx";
-import CatalogModal from "./CatalogModal.jsx";
 import ClassDetail from "./ClassDetail.jsx";
 import PlansModal from "./PlansModal.jsx";
 import IcsDialog from "./IcsDialog.jsx";
-import { META, CATALOG } from "./catalog.js";
 import { itemsFor } from "./plans.js";
 import { encodeShare, decodeShare } from "./share.js";
 import { findConflicts, overlaps, useLocalStorage, uid, fmt, slug, HUES } from "./utils.js";
+
+const AdminModal = lazy(() => import("./AdminModal.jsx"));
+const EMPTY = { program: "", term: "", courses: [] };
 
 function CourseCard({ c, hue, open, onToggle, picked, clashOf, hideClash, onPick, onEdit, onRemove }) {
   return (
@@ -71,23 +72,22 @@ function CourseCard({ c, hue, open, onToggle, picked, clashOf, hideClash, onPick
 }
 
 export default function App() {
-  const [catalogRaw, setCatalog] = useLocalStorage("cp-catalog", null);
+  const [catalogRaw, setCatalog] = useLocalStorage("cp-catalog", null); // cache of the selected department
+  const [deptRaw, setDeptId] = useLocalStorage("cp-dept", "");
   const [customRaw, setCustom] = useLocalStorage("cp-custom", []);
   const [picksRaw, setPicks] = useLocalStorage("cp-picks", {});
   const [plansRaw, setPlans] = useLocalStorage("cp-plans", []);
   const [titleRaw, setTitle] = useLocalStorage("cp-title", "My Semester Routine");
 
+  const deptId = typeof deptRaw === "string" ? deptRaw : "";
   const custom = Array.isArray(customRaw) ? customRaw : [];
   const picks = picksRaw && typeof picksRaw === "object" && !Array.isArray(picksRaw) ? picksRaw : {};
   const plans = Array.isArray(plansRaw) ? plansRaw : [];
   const title = typeof titleRaw === "string" ? titleRaw : "My Semester Routine";
 
   const base = useMemo(
-    () =>
-      catalogRaw && Array.isArray(catalogRaw.courses)
-        ? catalogRaw
-        : { program: META.program, term: META.term, courses: CATALOG },
-    [catalogRaw]
+    () => (catalogRaw && Array.isArray(catalogRaw.courses) && catalogRaw.program === deptId ? catalogRaw : EMPTY),
+    [catalogRaw, deptId]
   );
   const courses = useMemo(() => [...base.courses, ...custom], [base, custom]);
   const items = useMemo(() => itemsFor(courses, picks), [courses, picks]);
@@ -97,11 +97,14 @@ export default function App() {
   const [open, setOpen] = useState(null);
   const [hideClash, setHideClash] = useState(false);
   const [formFor, setFormFor] = useState(undefined); // undefined closed, null new, course edit
-  const [showCatalog, setShowCatalog] = useState(false);
   const [showPlans, setShowPlans] = useState(false);
   const [showIcs, setShowIcs] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
   const [detail, setDetail] = useState(null);
   const [toastMsg, setToastMsg] = useState("");
+  const [depts, setDepts] = useState(null); // null = loading
+  const [loadingCat, setLoadingCat] = useState(false);
+  const [netErr, setNetErr] = useState("");
   const tRef = useRef(0);
 
   const toast = useCallback((m) => {
@@ -118,6 +121,58 @@ export default function App() {
     } catch {}
     setTheme(next);
   }
+
+  /* ---------- department list from the server ---------- */
+  const loadList = useCallback(async () => {
+    try {
+      const r = await fetch("/api/catalog", { cache: "no-store" });
+      if (!r.ok) throw new Error("bad");
+      const d = await r.json();
+      setDepts(Array.isArray(d.departments) ? d.departments : []);
+      setNetErr("");
+    } catch {
+      setDepts((p) => p || []);
+      setNetErr("Could not reach the server. Showing the last saved list.");
+    }
+  }, []);
+  useEffect(() => {
+    loadList();
+  }, [loadList]);
+
+  // load the selected department's courses (cached until the admin publishes a new version)
+  useEffect(() => {
+    if (!depts || !depts.length) return;
+    if (!depts.some((d) => d.id === deptId)) {
+      setDeptId(depts.length === 1 ? depts[0].id : "");
+      return;
+    }
+    const meta = depts.find((d) => d.id === deptId);
+    if (catalogRaw && catalogRaw.program === deptId && catalogRaw.updatedAt === meta.updatedAt) return;
+    let alive = true;
+    setLoadingCat(true);
+    fetch(`/api/catalog?dept=${encodeURIComponent(deptId)}&v=${meta.updatedAt}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("bad"))))
+      .then((cat) => {
+        if (!alive) return;
+        setCatalog({ program: cat.program, term: cat.term, courses: cat.courses, updatedAt: cat.updatedAt });
+        const all = [...cat.courses, ...custom];
+        setPicks((p) => {
+          const n = {};
+          for (const [k, v] of Object.entries(p || {})) {
+            const c = all.find((x) => x.code === k);
+            if (c && c.sections.some((s) => s.sec === v)) n[k] = v;
+          }
+          return n;
+        });
+        setNetErr("");
+      })
+      .catch(() => alive && setNetErr("Could not load this department's list."))
+      .finally(() => alive && setLoadingCat(false));
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [depts, deptId]);
 
   // shared routine from URL hash
   useEffect(() => {
@@ -149,6 +204,7 @@ export default function App() {
   const conf = useMemo(() => findConflicts(shownItems), [shownItems]);
   const pickedCredits = shownItems.reduce((s, i) => s + (Number(i.credit) || 0), 0);
   const totalCredits = courses.reduce((s, c) => s + (Number(c.credit) || 0), 0);
+  const meta = depts && depts.find((d) => d.id === deptId);
 
   const clashOf = (c, s) => {
     const codes = [];
@@ -167,6 +223,7 @@ export default function App() {
 
   function autoPlan() {
     const order = courses.filter((c) => c.sections.length).sort((a, b) => a.sections.length - b.sections.length);
+    if (!order.length) return;
     const chosen = [];
     const result = {};
     let steps = 0;
@@ -221,28 +278,6 @@ export default function App() {
       delete n[c.code];
       return n;
     });
-  }
-
-  function onCatalogSave(cat) {
-    setCatalog({ program: cat.program, term: cat.term, courses: cat.courses });
-    const all = [...cat.courses, ...custom];
-    setPicks((p) => {
-      const n = {};
-      for (const [k, v] of Object.entries(p || {})) {
-        const c = all.find((x) => x.code === k);
-        if (c && c.sections.some((s) => s.sec === v)) n[k] = v;
-      }
-      return n;
-    });
-    setShowCatalog(false);
-    toast("Catalog saved");
-  }
-
-  function onCatalogReset() {
-    setCatalog(null);
-    setPicks({});
-    setShowCatalog(false);
-    toast("Default catalog restored");
   }
 
   async function share() {
@@ -323,6 +358,23 @@ export default function App() {
 
   const hueOf = (code) => HUES[Math.max(0, courses.findIndex((c) => c.code === code)) % 8];
 
+  const emptyTitle =
+    loadingCat || depts === null
+      ? "Loading course list…"
+      : !depts.length
+      ? "No course list yet"
+      : !deptId
+      ? "Choose your department"
+      : "No courses found";
+  const emptyText =
+    !depts || loadingCat
+      ? ""
+      : !depts.length
+      ? "The course list has not been published yet. Please check back later."
+      : !deptId
+      ? "Select your department from the menu above to see its courses."
+      : "";
+
   return (
     <div className="app">
       <header className="hdr">
@@ -332,9 +384,7 @@ export default function App() {
           </div>
           <div className="brand-t">
             <h1>Course Planner</h1>
-            <p>
-              {base.program} · {base.term} · routine maker
-            </p>
+            <p>{base.program ? `${base.program} · ${base.term} · routine maker` : "routine maker"}</p>
           </div>
         </div>
         <button className="icon-btn" onClick={toggleTheme} aria-label="Toggle light and dark theme">
@@ -394,10 +444,40 @@ export default function App() {
         <aside className="card sidebar">
           <div className="sb-head">
             <h2>Courses</h2>
-            <button className="btn primary" onClick={autoPlan}>
+            <button className="btn primary" onClick={autoPlan} disabled={!courses.length}>
               ✦ Auto plan
             </button>
           </div>
+
+          <div className="sb-dept">
+            <select
+              aria-label="Department"
+              value={deptId}
+              onChange={(e) => setDeptId(e.target.value)}
+              disabled={!depts || !depts.length}
+            >
+              <option value="">
+                {depts === null ? "Loading…" : depts.length ? "Select your department…" : "No lists published yet"}
+              </option>
+              {(depts || []).map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.id}
+                  {d.term ? ` · ${d.term}` : ""}
+                </option>
+              ))}
+            </select>
+            {meta && (
+              <p className="muted small" style={{ marginTop: 6 }}>
+                Updated {new Date(meta.updatedAt).toLocaleDateString()} · {meta.count} courses
+              </p>
+            )}
+          </div>
+          {netErr && (
+            <div className="notice" style={{ marginBottom: 10 }}>
+              {netErr}
+            </div>
+          )}
+
           <div className="sb-row">
             <label className="check">
               <input type="checkbox" checked={hideClash} onChange={(e) => setHideClash(e.target.checked)} />
@@ -411,10 +491,8 @@ export default function App() {
             <button className="btn ghost sm" onClick={() => setPicks({})}>
               Reset
             </button>
-            <button className="btn ghost sm" onClick={() => setShowCatalog(true)}>
-              ⚙ Manage
-            </button>
           </div>
+
           <div className="course-list">
             {courses.map((c, i) => (
               <CourseCard
@@ -431,7 +509,12 @@ export default function App() {
                 onRemove={removeCustom}
               />
             ))}
-            {courses.length === 0 && <p className="muted">No courses yet. Use “Manage” to add some.</p>}
+            {courses.length === 0 && (
+              <div className="empty">
+                <b>{emptyTitle}</b>
+                {emptyText && <p className="muted small">{emptyText}</p>}
+              </div>
+            )}
           </div>
         </aside>
 
@@ -470,11 +553,19 @@ export default function App() {
         </section>
       </main>
 
+      <footer className="foot">
+        <button className="linkbtn" onClick={() => setShowAdmin(true)}>
+          Admin
+        </button>
+      </footer>
+
       {formFor !== undefined && (
         <CourseForm courses={courses} editing={formFor} onSave={saveCustom} onClose={() => setFormFor(undefined)} />
       )}
-      {showCatalog && (
-        <CatalogModal base={base} onSave={onCatalogSave} onReset={onCatalogReset} onClose={() => setShowCatalog(false)} />
+      {showAdmin && (
+        <Suspense fallback={null}>
+          <AdminModal departments={depts || []} onClose={() => setShowAdmin(false)} onPublished={loadList} />
+        </Suspense>
       )}
       {showPlans && (
         <PlansModal
