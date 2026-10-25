@@ -444,9 +444,9 @@ export default function App() {
           </div>
         </div>
         <div className="hdr-actions">
-          <button className="btn primary sm" onClick={() => setShowAdmin(true)}>
-            🔒 Admin · Upload list
-          </button>
+         <button className="btn primary sm" onClick={() => setShowAdmin(true)}>
+  🔒 Admin
+</button>
           <button className="icon-btn" onClick={toggleTheme} aria-label="Toggle light and dark theme">
             <Icon name={theme === "dark" ? "sun" : "moon"} />
           </button>
@@ -654,11 +654,34 @@ export default function App() {
         </section>
       </main>
 
-      <footer className="foot">
-        <button className="linkbtn" onClick={() => setShowAdmin(true)}>
-          Admin
-        </button>
-      </footer>
+     <footer
+  className="foot"
+  style={{
+    marginTop: "50px",
+    paddingTop: "20px",
+    paddingBottom: "8px",
+    transform: "translateY(20px)",
+    fontSize: "10px",
+  }}
+>
+  <p style={{ margin: 0, lineHeight: 1.4 }}>
+    Developed by{" "}
+    <a
+      href="https://my-portfolio-eta-seven-hrcv9gnzaf.vercel.app/"
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        color: "var(--accent)",
+        textDecoration: "none",
+        fontWeight: 600,
+        whiteSpace: "nowrap",
+        fontSize: "10px",
+      }}
+    >
+      Shibli Noman Arnob
+    </a>
+  </p>
+</footer>
 
       {formFor !== undefined && (
         <CourseForm courses={courses} editing={formFor} onSave={saveCustom} onClose={() => setFormFor(undefined)} />

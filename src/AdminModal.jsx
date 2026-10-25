@@ -85,6 +85,7 @@ function PublishDialog({ pub, setPub, existing, busy, err, onPublish, onBack }) 
 
 export default function AdminModal({ departments, onClose, onPublished }) {
   const [pw, setPw] = useState("");
+  const [unlocked, setUnlocked] = useState(false);
   const [files, setFiles] = useState([]);
   const [separate, setSeparate] = useState(false);
   const [dept, setDept] = useState("");
@@ -107,6 +108,21 @@ export default function AdminModal({ departments, onClose, onPublished }) {
     () => () => queueRef.current.forEach((r) => (r.sources || []).forEach((s) => URL.revokeObjectURL(s.url))),
     []
   );
+
+  async function unlock() {
+    setErr("");
+    setMsg("");
+    if (!pw) return setErr("Enter the admin password.");
+    try {
+      setBusy("Checking password…");
+      await api({ action: "verify", password: pw });
+      setUnlocked(true);
+    } catch (e) {
+      setErr(e.message || "Could not verify password");
+    } finally {
+      setBusy("");
+    }
+  }
 
   async function start() {
     setErr("");
@@ -190,6 +206,58 @@ export default function AdminModal({ departments, onClose, onPublished }) {
     } finally {
       setBusy("");
     }
+  }
+
+  if (!unlocked) {
+    return (
+      <div className="overlay">
+        <div className="modal" role="dialog" aria-modal="true" aria-label="Admin password">
+          <div className="m-head">
+            <h3>Admin · enter password</h3>
+            <button className="icon-btn" aria-label="Close" onClick={onClose} disabled={!!busy}>
+              <Icon name="close" />
+            </button>
+          </div>
+          <form
+            className="m-body"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!busy) unlock();
+            }}
+          >
+            <p className="muted small">Enter the admin password to open the course-list management panel.</p>
+            <label className="field">
+              <span>Admin password</span>
+              <input
+                type="password"
+                autoComplete="current-password"
+                autoFocus
+                value={pw}
+                onChange={(e) => setPw(e.target.value)}
+              />
+            </label>
+            {busy && (
+              <div className="busy" role="status">
+                <span className="spinner" aria-hidden="true" /> {busy}
+              </div>
+            )}
+            {err && (
+              <div className="errors" role="alert">
+                {err}
+              </div>
+            )}
+            <div className="m-foot">
+              <button type="button" className="btn ghost" onClick={onClose} disabled={!!busy}>
+                Cancel
+              </button>
+              <button type="submit" className="btn primary" disabled={!!busy || !pw}>
+                Enter
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
   }
 
   return (
