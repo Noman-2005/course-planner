@@ -55,9 +55,18 @@ export function courseIssues(c) {
 
 export function summarize(courses, expected, warnings) {
   const credits = Math.round(courses.reduce((s, c) => s + (Number(c.credit) || 0), 0) * 10) / 10;
+  const sectionCount = courses.reduce((n, c) => n + c.sections.length, 0);
   const checks = [];
   const exp = expected || {};
   let any = false;
+  if (exp.sections != null) {
+    any = true;
+    checks.push(
+      sectionCount === exp.sections
+        ? { level: "ok", text: `All ${exp.sections} rows of the sheet were read (${courses.length} courses)` }
+        : { level: "bad", text: `The sheet has ${exp.sections} rows, but ${sectionCount} sections are in the list` }
+    );
+  }
   if (exp.courses != null) {
     any = true;
     checks.push(

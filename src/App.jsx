@@ -12,7 +12,7 @@ import { findConflicts, overlaps, useLocalStorage, uid, fmt, slug, HUES } from "
 const AdminModal = lazy(() => import("./AdminModal.jsx"));
 const EMPTY = { program: "", term: "", courses: [] };
 
-function CourseCard({ c, hue, open, onToggle, picked, clashOf, hideClash, onPick, onEdit, onRemove }) {
+function CourseCard({ c, hue, open, onToggle, picked, clashOf, hideClash, onPick, onEdit, onRemove, onDrop }) {
   return (
     <div className={"course" + (open ? " open" : "")} style={{ "--h": hue }}>
       <button className="course-head" onClick={onToggle} aria-expanded={open}>
@@ -55,16 +55,16 @@ function CourseCard({ c, hue, open, onToggle, picked, clashOf, hideClash, onPick
               </button>
             );
           })}
-          {c.custom && (
-            <div className="c-actions">
+          <div className="c-actions">
+            {c.custom && (
               <button className="btn ghost sm" onClick={() => onEdit(c)}>
                 <Icon name="edit" size={14} /> Edit
               </button>
-              <button className="btn ghost sm danger" onClick={() => onRemove(c)}>
-                <Icon name="trash" size={14} /> Remove
-              </button>
-            </div>
-          )}
+            )}
+            <button className="btn ghost sm danger" onClick={() => (c.custom ? onRemove(c) : onDrop(c))}>
+              <Icon name="trash" size={14} /> Remove course
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -74,12 +74,14 @@ function CourseCard({ c, hue, open, onToggle, picked, clashOf, hideClash, onPick
 export default function App() {
   const [catalogRaw, setCatalog] = useLocalStorage("cp-catalog", null); // cache of the selected department
   const [deptRaw, setDeptId] = useLocalStorage("cp-dept", "");
+  const [addedRaw, setAdded] = useLocalStorage("cp-added", []); // course codes the student added
   const [customRaw, setCustom] = useLocalStorage("cp-custom", []);
   const [picksRaw, setPicks] = useLocalStorage("cp-picks", {});
   const [plansRaw, setPlans] = useLocalStorage("cp-plans", []);
   const [titleRaw, setTitle] = useLocalStorage("cp-title", "My Semester Routine");
 
   const deptId = typeof deptRaw === "string" ? deptRaw : "";
+  const added = Array.isArray(addedRaw) ? addedRaw.filter((x) => typeof x === "string") : [];
   const custom = Array.isArray(customRaw) ? customRaw : [];
   const picks = picksRaw && typeof picksRaw === "object" && !Array.isArray(picksRaw) ? picksRaw : {};
   const plans = Array.isArray(plansRaw) ? plansRaw : [];
@@ -89,13 +91,19 @@ export default function App() {
     () => (catalogRaw && Array.isArray(catalogRaw.courses) && catalogRaw.program === deptId ? catalogRaw : EMPTY),
     [catalogRaw, deptId]
   );
-  const courses = useMemo(() => [...base.courses, ...custom], [base, custom]);
-  const items = useMemo(() => itemsFor(courses, picks), [courses, picks]);
+  const courses = useMemo(() => [...base.courses, ...custom], [base, custom]); // everything that exists
+  // "my courses" = the ones the student added (+ own custom courses); the routine is built from these only
+  const myCourses = useMemo(() => {
+    const byCode = new Map(base.courses.map((c) => [c.code, c]));
+    return [...added.map((code) => byCode.get(code)).filter(Boolean), ...custom];
+  }, [added, base, custom]);
+  const items = useMemo(() => itemsFor(myCourses, picks), [myCourses, picks]);
 
   const [theme, setTheme] = useState(() => document.documentElement.dataset.theme || "dark");
   const [shared, setShared] = useState(null);
   const [open, setOpen] = useState(null);
   const [hideClash, setHideClash] = useState(false);
+  const [query, setQuery] = useState("");
   const [formFor, setFormFor] = useState(undefined); // undefined closed, null new, course edit
   const [showPlans, setShowPlans] = useState(false);
   const [showIcs, setShowIcs] = useState(false);
@@ -155,6 +163,8 @@ export default function App() {
       .then((cat) => {
         if (!alive) return;
         setCatalog({ program: cat.program, term: cat.term, courses: cat.courses, updatedAt: cat.updatedAt });
+        const codes = new Set(cat.courses.map((c) => c.code));
+        setAdded((a) => (Array.isArray(a) ? a : []).filter((code) => codes.has(code)));
         const all = [...cat.courses, ...custom];
         setPicks((p) => {
           const n = {};
@@ -203,14 +213,43 @@ export default function App() {
   const shownTitle = shared ? shared.title : title;
   const conf = useMemo(() => findConflicts(shownItems), [shownItems]);
   const pickedCredits = shownItems.reduce((s, i) => s + (Number(i.credit) || 0), 0);
-  const totalCredits = courses.reduce((s, c) => s + (Number(c.credit) || 0), 0);
+  const totalCredits = myCourses.reduce((s, c) => s + (Number(c.credit) || 0), 0);
   const meta = depts && depts.find((d) => d.id === deptId);
+
+  const addedSet = useMemo(() => new Set(added), [added]);
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase().replace(/\s+/g, " ");
+    if (!q) return [];
+    const qn = q.replace(/\s/g, "");
+    return base.courses
+      .filter((c) => c.code.toLowerCase().replace(/\s/g, "").includes(qn) || c.title.toLowerCase().includes(q))
+      .slice(0, 30);
+  }, [query, base]);
 
   const clashOf = (c, s) => {
     const codes = [];
     for (const it of items) if (it.code !== c.code && overlaps(it, s) && !codes.includes(it.code)) codes.push(it.code);
     return codes;
   };
+
+  function addCourse(code) {
+    setAdded((a) => {
+      const list = Array.isArray(a) ? a : [];
+      return list.includes(code) ? list : [...list, code];
+    });
+    setOpen(code);
+    toast(`${code} added`);
+  }
+
+  function dropCourse(c) {
+    setAdded((a) => (Array.isArray(a) ? a : []).filter((x) => x !== c.code));
+    setPicks((p) => {
+      const n = { ...(p || {}) };
+      delete n[c.code];
+      return n;
+    });
+    if (open === c.code) setOpen(null);
+  }
 
   function pick(code, sec) {
     setPicks((p) => {
@@ -222,7 +261,7 @@ export default function App() {
   }
 
   function autoPlan() {
-    const order = courses.filter((c) => c.sections.length).sort((a, b) => a.sections.length - b.sections.length);
+    const order = myCourses.filter((c) => c.sections.length).sort((a, b) => a.sections.length - b.sections.length);
     if (!order.length) return;
     const chosen = [];
     const result = {};
@@ -246,7 +285,7 @@ export default function App() {
       setPicks(result);
       toast("Auto plan ready");
     } else {
-      window.alert("No conflict-free combination exists for all courses.");
+      window.alert("No conflict-free combination exists for the courses you added.");
     }
   }
 
@@ -295,19 +334,19 @@ export default function App() {
     }
   }
 
-    async function savePng(mode) {
+  async function savePng(mode) {
     const node = document.querySelector(".capture");
     if (!node) return;
-    const theme = mode || document.documentElement.dataset.theme || "light";
+    const themeName = mode || document.documentElement.dataset.theme || "light";
     let clone;
     try {
       const { toPng } = await import("html-to-image");
       clone = node.cloneNode(true);
       clone.classList.remove("theme-light", "theme-dark");
-      clone.classList.add("theme-" + theme);
+      clone.classList.add("theme-" + themeName);
       Object.assign(clone.style, { position: "fixed", left: "-10000px", top: "0", width: node.offsetWidth + "px" });
       document.body.appendChild(clone);
-      const bg = getComputedStyle(clone).getPropertyValue("--card").trim() || (theme === "dark" ? "#12152a" : "#ffffff");
+      const bg = getComputedStyle(clone).getPropertyValue("--card").trim() || (themeName === "dark" ? "#12152a" : "#ffffff");
       const url = await toPng(clone, {
         pixelRatio: 2,
         backgroundColor: bg,
@@ -316,7 +355,7 @@ export default function App() {
       });
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${slug(shownTitle)}-${theme}.png`;
+      a.download = `${slug(shownTitle)}-${themeName}.png`;
       a.click();
     } catch {
       toast("Could not create the PNG");
@@ -334,6 +373,7 @@ export default function App() {
     if (!shared) return;
     const nextCustom = [...custom];
     const nextPicks = {};
+    const nextAdded = [];
     const all = () => [...base.courses, ...nextCustom];
     const sameSec = (it) => (s) =>
       s.sec === it.section &&
@@ -345,6 +385,7 @@ export default function App() {
       let c = find(it.code) || find(it.code + " (shared)");
       if (c) {
         nextPicks[c.code] = it.section;
+        if (!c.custom && !nextAdded.includes(c.code)) nextAdded.push(c.code);
         continue;
       }
       let code = it.code;
@@ -364,13 +405,14 @@ export default function App() {
       nextPicks[code] = it.section;
     }
     setCustom(nextCustom);
+    setAdded(nextAdded);
     setPicks(nextPicks);
     setTitle(shared.title);
     closeShared();
     toast("Routine copied to your planner");
   }
 
-  const hueOf = (code) => HUES[Math.max(0, courses.findIndex((c) => c.code === code)) % 8];
+  const hueOf = (code) => HUES[Math.max(0, myCourses.findIndex((c) => c.code === code)) % 8];
 
   const emptyTitle =
     loadingCat || depts === null
@@ -379,15 +421,15 @@ export default function App() {
       ? "No course list yet"
       : !deptId
       ? "Choose your department"
-      : "No courses found";
+      : "Add your courses";
   const emptyText =
     !depts || loadingCat
       ? ""
       : !depts.length
       ? "The course list has not been published yet. Please check back later."
       : !deptId
-      ? "Select your department from the menu above to see its courses."
-      : "";
+      ? "Select your department from the menu above."
+      : "Search a course above (for example “CSE 3521” or “database”) and press + Add. Your routine is built from the courses you add.";
 
   return (
     <div className="app">
@@ -401,9 +443,14 @@ export default function App() {
             <p>{base.program ? `${base.program} · ${base.term} · routine maker` : "routine maker"}</p>
           </div>
         </div>
-        <button className="icon-btn" onClick={toggleTheme} aria-label="Toggle light and dark theme">
-          <Icon name={theme === "dark" ? "sun" : "moon"} />
-        </button>
+        <div className="hdr-actions">
+          <button className="btn primary sm" onClick={() => setShowAdmin(true)}>
+            🔒 Admin · Upload list
+          </button>
+          <button className="icon-btn" onClick={toggleTheme} aria-label="Toggle light and dark theme">
+            <Icon name={theme === "dark" ? "sun" : "moon"} />
+          </button>
+        </div>
       </header>
 
       <section className="stats" aria-label="Summary">
@@ -416,7 +463,7 @@ export default function App() {
         <div className="stat card">
           <span className="stat-l">Courses picked</span>
           <span className="stat-v">
-            {shownItems.length} / {courses.length}
+            {shownItems.length} / {myCourses.length}
           </span>
         </div>
         <div className={"stat card " + (conf.pairs.length ? "bad" : "good")}>
@@ -458,7 +505,7 @@ export default function App() {
         <aside className="card sidebar">
           <div className="sb-head">
             <h2>Courses</h2>
-            <button className="btn primary" onClick={autoPlan} disabled={!courses.length}>
+            <button className="btn primary" onClick={autoPlan} disabled={!myCourses.length}>
               ✦ Auto plan
             </button>
           </div>
@@ -492,6 +539,41 @@ export default function App() {
             </div>
           )}
 
+          {base.courses.length > 0 && (
+            <div className="finder">
+              <input
+                type="search"
+                className="finder-input"
+                placeholder="Search a course to add (code or name)…"
+                aria-label="Search courses to add"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              {query.trim() && (
+                <div className="results">
+                  {results.length === 0 && <p className="muted small" style={{ padding: 8 }}>No course found.</p>}
+                  {results.map((c) => {
+                    const isAdded = addedSet.has(c.code);
+                    return (
+                      <div className="result" key={c.code}>
+                        <div className="result-info">
+                          <b>{c.code}</b>
+                          <span>{c.title}</span>
+                          <em>
+                            {c.credit} cr · {c.sections.length} sections
+                          </em>
+                        </div>
+                        <button className="btn primary sm" onClick={() => addCourse(c.code)} disabled={isAdded}>
+                          {isAdded ? "✓ Added" : "+ Add"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="sb-row">
             <label className="check">
               <input type="checkbox" checked={hideClash} onChange={(e) => setHideClash(e.target.checked)} />
@@ -507,8 +589,9 @@ export default function App() {
             </button>
           </div>
 
+          {myCourses.length > 0 && <h3 className="my-head">My courses ({myCourses.length})</h3>}
           <div className="course-list">
-            {courses.map((c, i) => (
+            {myCourses.map((c, i) => (
               <CourseCard
                 key={(c.id || "") + c.code}
                 c={c}
@@ -521,9 +604,10 @@ export default function App() {
                 onPick={pick}
                 onEdit={(course) => setFormFor(course)}
                 onRemove={removeCustom}
+                onDrop={dropCourse}
               />
             ))}
-            {courses.length === 0 && (
+            {myCourses.length === 0 && (
               <div className="empty">
                 <b>{emptyTitle}</b>
                 {emptyText && <p className="muted small">{emptyText}</p>}
@@ -556,7 +640,7 @@ export default function App() {
               <button className="btn ghost sm" onClick={() => window.print()}>
                 <Icon name="printer" size={14} /> PDF
               </button>
-                           <button className="btn primary sm" onClick={() => savePng("light")}>
+              <button className="btn primary sm" onClick={() => savePng("light")}>
                 <Icon name="sun" size={14} /> PNG Light
               </button>
               <button className="btn primary sm" onClick={() => savePng("dark")}>
@@ -593,6 +677,8 @@ export default function App() {
           readOnly={!!shared}
           currentTitle={title}
           onLoad={(p) => {
+            const codes = Object.keys(p.picks || {});
+            setAdded(codes.filter((code) => base.courses.some((c) => c.code === code)));
             setPicks({ ...p.picks });
             setTitle(p.name);
             if (shared) closeShared();

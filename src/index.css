@@ -429,3 +429,24 @@ html[data-theme="dark"], .theme-dark { --line-soft: #1a1e38; }
   border: 2px dashed var(--line); border-radius: 16px;
 }
 @media print { .foot { display: none !important; } }
+
+.hdr-actions { display: flex; align-items: center; gap: 8px; }
+
+/* course finder (search + Add) */
+.finder { margin-bottom: 12px; }
+.finder-input { width: 100%; }
+.results {
+  margin-top: 8px; max-height: 320px; overflow: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--card);
+}
+.result { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.result:last-child { border-bottom: 0; }
+.result-info { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 13px; }
+.result-info b { font-size: 14px; }
+.result-info span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.result-info em { font-style: normal; color: var(--muted); font-size: 12px; }
+.my-head { font-size: 14px; margin: 6px 0 8px; color: var(--muted); }
+
+/* review screen for big lists */
+.rv-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.rv-filter { flex: 1 1 220px; width: auto; }
+.rv-count { font-size: 12px; color: var(--muted); white-space: nowrap; }

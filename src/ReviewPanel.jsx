@@ -13,6 +13,10 @@ export default function ReviewPanel({ result, onApply, onCancel }) {
     }))
   );
   const [error, setError] = useState("");
+  const [filter, setFilter] = useState("");
+  // big lists start collapsed so the page stays fast
+  const [openKeys, setOpenKeys] = useState(() => new Set());
+  const [allOpen, setAllOpen] = useState(() => result.courses.length <= 12);
 
   const upC = (k, patch) => setCourses((cs) => cs.map((c) => (c.k === k ? { ...c, ...patch } : c)));
   const upS = (ck, sk, patch) =>
@@ -23,8 +27,32 @@ export default function ReviewPanel({ result, onApply, onCancel }) {
   const delS = (ck, sk) =>
     setCourses((cs) => cs.map((c) => (c.k !== ck ? c : { ...c, sections: c.sections.filter((s) => s.k !== sk) })));
 
+  const isOpen = (k) => (allOpen ? !openKeys.has("-" + k) : openKeys.has(k));
+  const toggle = (k) =>
+    setOpenKeys((prev) => {
+      const n = new Set(prev);
+      const key = allOpen ? "-" + k : k;
+      if (n.has(key)) n.delete(key);
+      else n.add(key);
+      return n;
+    });
+  const expandAll = () => {
+    setAllOpen(true);
+    setOpenKeys(new Set());
+  };
+  const collapseAll = () => {
+    setAllOpen(false);
+    setOpenKeys(new Set());
+  };
+  const expandFlagged = () => {
+    setAllOpen(false);
+    setOpenKeys(new Set(courses.filter((c) => courseIssues(c).length || c.sections.some((s) => sectionIssues(c, s).length)).map((c) => c.k)));
+  };
+
   const summary = useMemo(() => summarize(courses, result.expected, result.warnings), [courses, result]);
   const totalSections = courses.reduce((n, c) => n + c.sections.length, 0);
+  const q = filter.trim().toLowerCase();
+  const visible = q ? courses.filter((c) => (c.code + " " + c.title).toLowerCase().includes(q)) : courses;
 
   function apply() {
     const clean = courses.map((c) => ({
@@ -90,90 +118,120 @@ export default function ReviewPanel({ result, onApply, onCancel }) {
             </details>
           )}
 
-          {courses.map((c) => {
+          <div className="rv-tools">
+            <input
+              className="rv-filter"
+              placeholder="Filter courses (code or title)…"
+              aria-label="Filter courses"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            />
+            <button className="btn ghost sm" onClick={expandAll}>
+              Expand all
+            </button>
+            <button className="btn ghost sm" onClick={collapseAll}>
+              Collapse all
+            </button>
+            <button className="btn ghost sm" onClick={expandFlagged}>
+              Expand flagged
+            </button>
+          </div>
+
+          {visible.map((c) => {
             const ci = courseIssues(c);
+            const flagged = c.sections.filter((s) => sectionIssues(c, s).length).length;
+            const open = isOpen(c.k);
             return (
-              <div className={"rv-course" + (ci.length ? " warn" : "")} key={c.k}>
+              <div className={"rv-course" + (ci.length || flagged ? " warn" : "")} key={c.k}>
                 <div className="rv-chead">
+                  <button className="icon-btn" aria-label={open ? "Collapse course" : "Expand course"} aria-expanded={open} onClick={() => toggle(c.k)}>
+                    <span style={{ display: "inline-block", transform: open ? "rotate(180deg)" : "none" }}>▾</span>
+                  </button>
                   <input aria-label="Course code" className="w-code" value={c.code} onChange={(e) => upC(c.k, { code: e.target.value })} />
                   <input aria-label="Course title" className="w-title" value={c.title} onChange={(e) => upC(c.k, { title: e.target.value })} />
                   <input aria-label="Credit" className="w-cr" type="number" step="0.5" min="0" value={c.credit} onChange={(e) => upC(c.k, { credit: e.target.value })} />
+                  <span className="rv-count">
+                    {c.sections.length} sec{flagged ? ` · ${flagged} flagged` : ""}
+                  </span>
                   <button className="icon-btn" aria-label={`Remove course ${c.code}`} onClick={() => delC(c.k)}>
                     <Icon name="trash" />
                   </button>
                 </div>
                 {ci.length > 0 && <div className="why">{ci.join(" · ")}</div>}
-                <div className="rv-scroll">
-                  <table className="rv-table">
-                    <thead>
-                      <tr>
-                        <th>Sec</th>
-                        <th>Faculty</th>
-                        <th>Days</th>
-                        <th>Start</th>
-                        <th>End</th>
-                        <th>Room</th>
-                        <th>Seats</th>
-                        <th />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {c.sections.map((s) => {
-                        const issues = sectionIssues(c, s);
-                        return (
-                          <tr key={s.k} className={issues.length ? "warn" : ""}>
-                            <td>
-                              <input aria-label="Section" className="w-sec" value={s.sec} onChange={(e) => upS(c.k, s.k, { sec: e.target.value })} />
-                            </td>
-                            <td>
-                              <input aria-label="Faculty" className="w-fac" value={s.faculty} onChange={(e) => upS(c.k, s.k, { faculty: e.target.value })} />
-                            </td>
-                            <td>
-                              <input
-                                aria-label="Days"
-                                className="w-days"
-                                value={s.daysText}
-                                onChange={(e) => upS(c.k, s.k, { daysText: e.target.value, days: parseDays(e.target.value).days })}
-                                onBlur={(e) => {
-                                  const { days } = parseDays(e.target.value);
-                                  upS(c.k, s.k, { days, daysText: days.join(" ") });
-                                }}
-                              />
-                            </td>
-                            <td>
-                              <input aria-label="Start time" type="time" value={s.start} onChange={(e) => upS(c.k, s.k, { start: e.target.value })} />
-                            </td>
-                            <td>
-                              <input aria-label="End time" type="time" value={s.end} onChange={(e) => upS(c.k, s.k, { end: e.target.value })} />
-                            </td>
-                            <td>
-                              <input aria-label="Room" className="w-room" value={s.room} onChange={(e) => upS(c.k, s.k, { room: e.target.value })} />
-                            </td>
-                            <td>
-                              <input
-                                aria-label="Seats"
-                                className="w-seats"
-                                type="number"
-                                min="0"
-                                value={s.seats == null ? "" : s.seats}
-                                onChange={(e) => upS(c.k, s.k, { seats: e.target.value === "" ? null : Number(e.target.value) })}
-                              />
-                            </td>
-                            <td>
-                              <button className="icon-btn" aria-label={`Remove section ${s.sec}`} onClick={() => delS(c.k, s.k)}>
-                                <Icon name="trash" size={16} />
-                              </button>
-                              {issues.length > 0 && <div className="why row">{issues.join(" · ")}</div>}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                {open && (
+                  <div className="rv-scroll">
+                    <table className="rv-table">
+                      <thead>
+                        <tr>
+                          <th>Sec</th>
+                          <th>Faculty</th>
+                          <th>Days</th>
+                          <th>Start</th>
+                          <th>End</th>
+                          <th>Room</th>
+                          <th>Seats</th>
+                          <th />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {c.sections.map((s) => {
+                          const issues = sectionIssues(c, s);
+                          return (
+                            <tr key={s.k} className={issues.length ? "warn" : ""}>
+                              <td>
+                                <input aria-label="Section" className="w-sec" value={s.sec} onChange={(e) => upS(c.k, s.k, { sec: e.target.value })} />
+                              </td>
+                              <td>
+                                <input aria-label="Faculty" className="w-fac" value={s.faculty} onChange={(e) => upS(c.k, s.k, { faculty: e.target.value })} />
+                              </td>
+                              <td>
+                                <input
+                                  aria-label="Days"
+                                  className="w-days"
+                                  value={s.daysText}
+                                  onChange={(e) => upS(c.k, s.k, { daysText: e.target.value, days: parseDays(e.target.value).days })}
+                                  onBlur={(e) => {
+                                    const { days } = parseDays(e.target.value);
+                                    upS(c.k, s.k, { days, daysText: days.join(" ") });
+                                  }}
+                                />
+                              </td>
+                              <td>
+                                <input aria-label="Start time" type="time" value={s.start} onChange={(e) => upS(c.k, s.k, { start: e.target.value })} />
+                              </td>
+                              <td>
+                                <input aria-label="End time" type="time" value={s.end} onChange={(e) => upS(c.k, s.k, { end: e.target.value })} />
+                              </td>
+                              <td>
+                                <input aria-label="Room" className="w-room" value={s.room} onChange={(e) => upS(c.k, s.k, { room: e.target.value })} />
+                              </td>
+                              <td>
+                                <input
+                                  aria-label="Seats"
+                                  className="w-seats"
+                                  type="number"
+                                  min="0"
+                                  value={s.seats == null ? "" : s.seats}
+                                  onChange={(e) => upS(c.k, s.k, { seats: e.target.value === "" ? null : Number(e.target.value) })}
+                                />
+                              </td>
+                              <td>
+                                <button className="icon-btn" aria-label={`Remove section ${s.sec}`} onClick={() => delS(c.k, s.k)}>
+                                  <Icon name="trash" size={16} />
+                                </button>
+                                {issues.length > 0 && <div className="why row">{issues.join(" · ")}</div>}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             );
           })}
+          {visible.length === 0 && <p className="muted">No course matches the filter.</p>}
           {error && (
             <div className="errors" role="alert">
               {error}

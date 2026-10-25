@@ -1,4 +1,5 @@
 import { joinFaculty, parseHeader, parseSchedToken, postWarnings, resolveSchedule, SCHED_SRC } from "./utils.js";
+import { parseUiuTable } from "./uiuTable.js";
 
 const NUM = /^\d+$/;
 const SECTION = /^[A-Z]{1,3}$/;
@@ -11,11 +12,34 @@ const median = (a) => {
   return s.length ? s[s.length >> 1] : 0;
 };
 
-/* ---------- words from PDF ---------- */
-async function pdfWords(file, report, ocr) {
+async function loadPdf(file) {
   const pdfjs = await import("pdfjs-dist");
   pdfjs.GlobalWorkerOptions.workerSrc = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
-  const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  return pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+}
+
+/* ---------- PDF text items with positions (no OCR) ---------- */
+async function pdfTextPages(file, report) {
+  const pdf = await loadPdf(file);
+  const pages = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    if (p === 1 || p % 6 === 0) report(`${file.name}: reading page ${p}/${pdf.numPages}…`);
+    const page = await pdf.getPage(p);
+    const vp = page.getViewport({ scale: 1 });
+    const tc = await page.getTextContent();
+    pages.push({
+      items: tc.items
+        .filter((it) => typeof it.str === "string" && it.str.trim())
+        .map((it) => ({ s: it.str, x: it.transform[4], y: vp.height - it.transform[5], w: it.width })),
+    });
+  }
+  if (pdf.destroy) await pdf.destroy();
+  return pages;
+}
+
+/* ---------- words from PDF (generic path, OCR for pages without text) ---------- */
+async function pdfWords(file, report, ocr) {
+  const pdf = await loadPdf(file);
   const words = [];
   let offset = 0;
   for (let p = 1; p <= pdf.numPages; p++) {
@@ -321,7 +345,8 @@ export async function importFiles(files, report = () => {}) {
   const list = Array.from(files);
   const warnings = [];
   const sources = [];
-  const parts = [];
+  const parts = []; // generic (OCR / free text) results
+  const tables = []; // UIU "Course Offerings" table results
   let worker = null;
   let label = "";
 
@@ -362,8 +387,19 @@ export async function importFiles(files, report = () => {}) {
         continue;
       }
       let words;
-      if (isPdf) words = await pdfWords(file, report, ocr);
-      else {
+      if (isPdf) {
+        // 1) the university table (Course Offerings sheet) is read by column position, no OCR needed
+        const pages = await pdfTextPages(file, report);
+        const table = parseUiuTable(pages);
+        if (table && table.courses.length) {
+          report(`${file.name}: reading table…`);
+          warnings.push(...table.warnings.map((x) => (list.length > 1 ? `${file.name}: ${x}` : x)));
+          tables.push(table);
+          continue;
+        }
+        // 2) any other PDF: read words (OCR only for pages without text)
+        words = await pdfWords(file, report, ocr);
+      } else {
         sources.push({ name: file.name, url: URL.createObjectURL(file) });
         words = await imageWords(file, report, ocr);
       }
@@ -386,15 +422,19 @@ export async function importFiles(files, report = () => {}) {
     }
   }
 
-  const courses = mergeCourses(parts.flatMap((p) => p.courses));
-  postWarnings(courses, warnings);
-  const hdr = parts.map((p) => p.header).find((h) => h.program || h.term) || { program: "", term: "" };
-  return {
-    program: hdr.program,
-    term: hdr.term,
-    courses,
-    warnings,
-    expected: list.length === 1 && parts[0] ? parts[0].header.expected : { courses: null, credits: null },
-    sources,
-  };
+  // gap warnings only make sense for free-text/OCR results; the university table is authoritative
+  const generic = mergeCourses(parts.flatMap((p) => p.courses));
+  postWarnings(generic, warnings);
+  const courses = mergeCourses([...generic, ...tables.flatMap((t) => t.courses)]);
+
+  const hdr =
+    tables.find((t) => t.program || t.term) || parts.map((p) => p.header).find((h) => h.program || h.term) || { program: "", term: "" };
+
+  let expected = { courses: null, credits: null };
+  if (list.length === 1) {
+    if (tables[0]) expected = tables[0].expected;
+    else if (parts[0]) expected = parts[0].header.expected;
+  }
+
+  return { program: hdr.program, term: hdr.term, courses, warnings, expected, sources };
 }
