@@ -143,11 +143,13 @@ export function resolveSchedule(label, entries, warnings) {
 /* ---------- faculty name rule ---------- */
 export const isShortCode = (s) => /^\S+$/.test(s) && (s.match(/[A-Z]/g) || []).length >= 2;
 
-// join all lines; drop ONLY a trailing single-token short-code line (FAH, MahHsn, TBA...)
 export function joinFaculty(lines) {
-  let L = lines.map((s) => String(s).trim()).filter(Boolean);
-  if (L.length > 1 && isShortCode(L[L.length - 1])) L = L.slice(0, -1);
-  return L.join(" ").replace(/\s+/g, " ").trim();
+  return lines
+    .map((s) => String(s))
+    .filter((s) => s.trim().length > 0)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /* ---------- page header + post warnings ---------- */
