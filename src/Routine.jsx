@@ -1,14 +1,12 @@
 import { DAYS, toMin, hourLabel, layoutDay } from "./utils.js";
 
-const PPH = 88; // Pixels per hour
+const PPH = 88; // pixels per hour
 
-// Convert time to a readable format, e.g. 8:30 AM
+// "8:30 AM", "11 AM"
 function short(t) {
   const m = toMin(t);
-
   let h = Math.floor(m / 60);
   const mm = m % 60;
-
   const ap = h >= 12 ? "PM" : "AM";
 
   h = h % 12 || 12;
@@ -34,20 +32,20 @@ export default function Routine({
     "Sat",
   ][new Date().getDay()];
 
-  // Determine routine start and end times
-  const startTimes = items.map((i) => toMin(i.start));
-  const endTimes = items.map((i) => toMin(i.end));
-
   const from =
-    Math.floor(Math.min(480, ...startTimes) / 60) * 60;
+    Math.floor(
+      Math.min(480, ...items.map((i) => toMin(i.start))) / 60
+    ) * 60;
 
   const to =
-    Math.ceil(Math.max(1020, ...endTimes) / 60) * 60;
+    Math.ceil(
+      Math.max(1020, ...items.map((i) => toMin(i.end))) / 60
+    ) * 60;
 
-  // Timeline height
+  // Timeline height follows the time range.
   const height = ((to - from) * PPH) / 60;
 
-  // Convert time to vertical position
+  // Convert a time into a vertical pixel position.
   const y = (min) => ((min - from) * PPH) / 60;
 
   const credits = items.reduce(
@@ -55,7 +53,6 @@ export default function Routine({
     0
   );
 
-  // Unique course legend
   const legend = [];
 
   items.forEach((item) => {
@@ -64,14 +61,12 @@ export default function Routine({
     }
   });
 
-  // Half-hour grid lines
   const lines = [];
 
   for (let m = from + 30; m <= to; m += 30) {
     lines.push(m);
   }
 
-  // Hour labels
   const hours = [];
 
   for (let m = from + 60; m <= to; m += 60) {
@@ -91,8 +86,9 @@ export default function Routine({
 
         <span>
           {items.length}{" "}
-          {items.length === 1 ? "course" : "courses"}{" "}
-          · {credits} credits
+          {items.length === 1 ? "course" : "courses"}
+          {" · "}
+          {credits} credits
         </span>
       </div>
 
@@ -132,7 +128,6 @@ export default function Routine({
           </div>
         ))}
 
-        {/* Time labels */}
         <div className="rt-times" style={{ height }}>
           {hours.map((minute) => (
             <span
@@ -144,14 +139,12 @@ export default function Routine({
           ))}
         </div>
 
-        {/* Daily routine columns */}
         {DAYS.map((day) => (
           <div
             className="rt-col"
             style={{ height }}
             key={day}
           >
-            {/* Timeline grid */}
             {lines.map((minute) => (
               <i
                 className={
@@ -163,22 +156,11 @@ export default function Routine({
               />
             ))}
 
-            {/* Classes */}
             {layoutDay(items, day).map(
               ({ c, lane, lanes }) => {
                 const start = toMin(c.start);
                 const end = toMin(c.end);
-
-                // Calculate height from actual class duration
                 const duration = Math.max(0, end - start);
-                const blockHeight = (duration * PPH) / 60;
-
-                // Calculate horizontal position
-                const blockLeft =
-                  `calc(${lane} * 100% / ${lanes} + 2px)`;
-
-                const blockWidth =
-                  `calc(100% / ${lanes} - 4px)`;
 
                 return (
                   <div
@@ -192,12 +174,15 @@ export default function Routine({
                     aria-label={`${c.code} section ${c.section}, ${day} ${short(c.start)} to ${short(c.end)}`}
                     style={{
                       "--h": c.hue,
+
                       top: y(start),
-                      height: blockHeight,
-                      left: blockLeft,
-                      width: blockWidth,
-                      boxSizing: "border-box",
-                      minWidth: 0,
+
+                      // Box height matches the actual class duration.
+                      height: (duration * PPH) / 60,
+
+                      left: `calc(${lane} * 100% / ${lanes} + 4px)`,
+
+                      width: `calc(100% / ${lanes} - 8px)`,
                     }}
                     onClick={() => select(c)}
                     onKeyDown={(event) => {
@@ -210,7 +195,6 @@ export default function Routine({
                       }
                     }}
                   >
-                    {/* Course title and section */}
                     <div className="rt-title">
                       <span className="rt-sec">
                         Sec {c.section}
@@ -219,19 +203,16 @@ export default function Routine({
                       {c.title}
                     </div>
 
-                    {/* Class time */}
                     <div className="rt-time">
                       {short(c.start)} – {short(c.end)}
                     </div>
 
-                    {/* Room */}
                     {c.room && (
                       <div className="rt-room">
                         {c.room}
                       </div>
                     )}
 
-                    {/* Faculty initial and name */}
                     <div className="rt-fac">
                       {c.facultyInitial ? (
                         <span className="rt-av">
