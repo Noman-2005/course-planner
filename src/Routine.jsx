@@ -1,8 +1,7 @@
 import { DAYS, toMin, hourLabel, layoutDay } from "./utils.js";
 
-const PPH = 88; // pixels per hour
+const PPH = 88;
 
-// "8:30 AM", "11 AM"
 function short(t) {
   const m = toMin(t);
   let h = Math.floor(m / 60);
@@ -42,10 +41,8 @@ export default function Routine({
       Math.max(1020, ...items.map((i) => toMin(i.end))) / 60
     ) * 60;
 
-  // Timeline height follows the time range.
   const height = ((to - from) * PPH) / 60;
 
-  // Convert a time into a vertical pixel position.
   const y = (min) => ((min - from) * PPH) / 60;
 
   const credits = items.reduce(
@@ -174,14 +171,9 @@ export default function Routine({
                     aria-label={`${c.code} section ${c.section}, ${day} ${short(c.start)} to ${short(c.end)}`}
                     style={{
                       "--h": c.hue,
-
                       top: y(start),
-
-                      // Box height matches the actual class duration.
                       height: (duration * PPH) / 60,
-
                       left: `calc(${lane} * 100% / ${lanes} + 4px)`,
-
                       width: `calc(100% / ${lanes} - 8px)`,
                     }}
                     onClick={() => select(c)}
@@ -195,12 +187,14 @@ export default function Routine({
                       }
                     }}
                   >
-                    <div className="rt-title">
+                    <div className="rt-title-row">
+                      <div className="rt-title">
+                        {c.title}
+                      </div>
+
                       <span className="rt-sec">
                         Sec {c.section}
                       </span>
-
-                      {c.title}
                     </div>
 
                     <div className="rt-time">
@@ -215,7 +209,10 @@ export default function Routine({
 
                     <div className="rt-fac">
                       {c.facultyInitial ? (
-                        <span className="rt-av">
+                        <span
+                          className="rt-av"
+                          aria-label={`Faculty initial ${c.facultyInitial}`}
+                        >
                           {c.facultyInitial}
                         </span>
                       ) : null}

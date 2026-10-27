@@ -400,7 +400,18 @@ export default function App() {
         title: it.title,
         credit: it.credit,
         custom: true,
-        sections: [{ sec: it.section, faculty: it.faculty, days: it.days, start: it.start, end: it.end, room: it.room, seats: null }],
+        sections: [
+  {
+    sec: it.section,
+    faculty: it.faculty,
+    facultyInitial: it.facultyInitial || "",
+    days: it.days,
+    start: it.start,
+    end: it.end,
+    room: it.room,
+    seats: null,
+  },
+],
       });
       nextPicks[code] = it.section;
     }
@@ -445,7 +456,7 @@ export default function App() {
         </div>
         <div className="hdr-actions">
          <button className="btn primary sm" onClick={() => setShowAdmin(true)}>
-  🔒 Admin
+  Admin
 </button>
           <button className="icon-btn" onClick={toggleTheme} aria-label="Toggle light and dark theme">
             <Icon name={theme === "dark" ? "sun" : "moon"} />
