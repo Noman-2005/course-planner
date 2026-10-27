@@ -7,10 +7,102 @@ import PlansModal from "./PlansModal.jsx";
 import IcsDialog from "./IcsDialog.jsx";
 import { itemsFor } from "./plans.js";
 import { encodeShare, decodeShare } from "./share.js";
-import { findConflicts, overlaps, useLocalStorage, uid, fmt, slug, HUES } from "./utils.js";
+import { findConflicts, overlaps, useLocalStorage, uid, fmt, fmtDur, toMin, slug, HUES } from "./utils.js";
 
 const AdminModal = lazy(() => import("./AdminModal.jsx"));
 const EMPTY = { program: "", term: "", courses: [] };
+
+/* ---------- Auto plan helpers ---------- */
+
+function shuffleArr(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Builds conflict-free section combinations, ranked by smallest total gap between classes.
+// Uses forward checking + a time limit so it never freezes the page.
+function buildAutoCombos(courses, maxCombos = 20000, timeMs = 600) {
+  const base = courses
+    .filter((c) => c.sections.length)
+    .map((c) => ({
+      code: c.code,
+      secs: shuffleArr(
+        c.sections.map((s) => ({ sec: s.sec, days: s.days, a: toMin(s.start), b: toMin(s.end) }))
+      ),
+    }));
+
+  const clash = (x, y) => x.a < y.b && y.a < x.b && x.days.some((d) => y.days.includes(d));
+
+  const gapScore = (chosen) => {
+    const byDay = {};
+    for (const { s } of chosen) for (const d of s.days) (byDay[d] = byDay[d] || []).push(s);
+    let total = 0;
+    for (const d in byDay) {
+      const list = byDay[d].sort((p, q) => p.a - q.a);
+      for (let i = 1; i < list.length; i++) total += Math.max(0, list[i].a - list[i - 1].b);
+    }
+    return total;
+  };
+
+  const results = [];
+  const chosen = [];
+  const t0 = performance.now();
+  let tick = 0;
+  let timedOut = false;
+
+  const bt = (remaining) => {
+    if (timedOut || results.length >= maxCombos) return;
+    if ((++tick & 255) === 0 && performance.now() - t0 > timeMs) {
+      timedOut = true;
+      return;
+    }
+    if (!remaining.length) {
+      const picks = {};
+      for (const { code, s } of chosen) picks[code] = s.sec;
+      results.push({ picks, score: gapScore(chosen) });
+      return;
+    }
+
+    // pick the most constrained course first (fewest options left)
+    let bi = 0;
+    for (let k = 1; k < remaining.length; k++) {
+      if (remaining[k].secs.length < remaining[bi].secs.length) bi = k;
+    }
+    const cur = remaining[bi];
+    const rest = remaining.filter((_, k) => k !== bi);
+
+    for (const s of cur.secs) {
+      // forward check: every other course must still have at least one usable section
+      const next = [];
+      let ok = true;
+      for (const r of rest) {
+        const secs = r.secs.filter((x) => !clash(x, s));
+        if (!secs.length) {
+          ok = false;
+          break;
+        }
+        next.push({ code: r.code, secs });
+      }
+      if (!ok) continue;
+
+      chosen.push({ code: cur.code, s });
+      bt(next);
+      chosen.pop();
+      if (timedOut || results.length >= maxCombos) return;
+    }
+  };
+
+  if (base.length) bt(base);
+  results.sort((p, q) => p.score - q.score);
+  return { list: results, timedOut };
+}
+
+
+const comboKey = (picks, codes) => codes.map((c) => c + ":" + (picks ? picks[c] : "")).join("|");
 
 function CourseCard({ c, hue, open, onToggle, picked, clashOf, hideClash, onPick, onEdit, onRemove, onDrop }) {
   return (
@@ -98,6 +190,7 @@ export default function App() {
     return [...added.map((code) => byCode.get(code)).filter(Boolean), ...custom];
   }, [added, base, custom]);
   const items = useMemo(() => itemsFor(myCourses, picks), [myCourses, picks]);
+    const autoRef = useRef({ sig: "", list: [], i: 0 });
 
   const [theme, setTheme] = useState(() => document.documentElement.dataset.theme || "dark");
   const [shared, setShared] = useState(null);
@@ -260,33 +353,59 @@ export default function App() {
     });
   }
 
-  function autoPlan() {
-    const order = myCourses.filter((c) => c.sections.length).sort((a, b) => a.sections.length - b.sections.length);
-    if (!order.length) return;
-    const chosen = [];
-    const result = {};
-    let steps = 0;
-    const bt = (i) => {
-      if (i === order.length) return true;
-      if (++steps > 600000) return false;
-      const c = order[i];
-      for (const s of c.sections) {
-        if (chosen.every((o) => !overlaps(o, s))) {
-          chosen.push(s);
-          result[c.code] = s.sec;
-          if (bt(i + 1)) return true;
-          chosen.pop();
-          delete result[c.code];
-        }
+      function autoPlan() {
+    const valid = myCourses.filter((c) => c.sections.length);
+    if (!valid.length) return;
+
+    const codes = valid.map((c) => c.code).sort();
+    const sig = valid
+      .map((c) => c.code + "[" + c.sections.map((s) => `${s.sec}@${s.days.join("")}${s.start}-${s.end}`).join(",") + "]")
+      .sort()
+      .join("|");
+
+    const st = autoRef.current;
+    if (st.sig !== sig) {
+      const built = buildAutoCombos(myCourses);
+      if (!built.list.length) {
+        st.sig = ""; // don't cache a failed search
+        window.alert(
+          built.timedOut
+            ? "Too many courses to check quickly. Try removing a course or two and run Auto plan again."
+            : "No slot available. The courses you added can't fit together without a time clash. Remove a course or change a section and try again."
+        );
+        return;
       }
-      return false;
-    };
-    if (bt(0)) {
-      setPicks(result);
-      toast("Auto plan ready");
-    } else {
-      window.alert("No conflict-free combination exists for the courses you added.");
+      st.sig = sig;
+      st.list = built.list;
+      st.i = 0;
     }
+
+    const curKey = comboKey(picks, codes);
+    let next = null;
+    let wrapped = false;
+
+    for (let tries = 0; tries < st.list.length; tries++) {
+      if (st.i >= st.list.length) {
+        st.i = 0;
+        wrapped = true;
+      }
+      const cand = st.list[st.i++];
+      if (comboKey(cand.picks, codes) !== curKey) {
+        next = cand;
+        break;
+      }
+    }
+
+    if (!next) {
+      toast("This is the only possible combination");
+      return;
+    }
+
+    setPicks(next.picks);
+    toast(
+      (wrapped ? "All combinations shown, starting over · " : "Auto plan ready · ") +
+        (next.score === 0 ? "no gaps" : `total gap ${fmtDur(next.score)}`)
+    );
   }
 
   function saveCustom(course, oldCode) {
