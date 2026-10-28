@@ -8,6 +8,7 @@ import IcsDialog from "./IcsDialog.jsx";
 import { itemsFor } from "./plans.js";
 import { encodeShare, decodeShare } from "./share.js";
 import { findConflicts, overlaps, useLocalStorage, uid, fmt, fmtDur, toMin, slug, HUES } from "./utils.js";
+import CampusHero from "./CampusHero.jsx";
 
 const AdminModal = lazy(() => import("./AdminModal.jsx"));
 const EMPTY = { program: "", term: "", courses: [] };
@@ -582,6 +583,7 @@ export default function App() {
           </button>
         </div>
       </header>
+            <CampusHero />
 
       <section className="stats" aria-label="Summary">
         <div className="stat card">
