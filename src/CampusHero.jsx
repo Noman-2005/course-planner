@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import "./CampusHero.css";
 
@@ -166,6 +166,18 @@ function Cloud({ s = 1, y = 0, t = 110, d = 0, o = 0.92 }) {
 }
 
 export default function CampusHero() {
+    const rootRef = useRef(null);
+
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      ([entry]) => el.classList.toggle("uh-paused", !entry.isIntersecting),
+      { threshold: 0 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
   const D = useMemo(() => {
     const r = rng(23);
 
@@ -226,6 +238,7 @@ export default function CampusHero() {
 
   return (
     <div
+      ref={rootRef}
       className="uh"
       role="img"
       aria-label="United International University campus, animated"

@@ -9,6 +9,7 @@ import { itemsFor } from "./plans.js";
 import { encodeShare, decodeShare } from "./share.js";
 import { findConflicts, overlaps, useLocalStorage, uid, fmt, fmtDur, toMin, slug, HUES } from "./utils.js";
 import CampusHero from "./CampusHero.jsx";
+import uiuLogo from "./assets/uiu-logo.png";
 
 const AdminModal = lazy(() => import("./AdminModal.jsx"));
 const EMPTY = { program: "", term: "", courses: [] };
@@ -565,15 +566,18 @@ export default function App() {
   return (
     <div className="app">
       <header className="hdr">
-        <div className="brand">
+                    <div className="brand">
           <div className="logo" aria-hidden="true">
-            <Icon name="calendar" size={22} />
+            <img src={uiuLogo} alt="" />
           </div>
           <div className="brand-t">
-            <h1>Course Planner</h1>
-            <p>{base.program ? `${base.program} · ${base.term} · routine maker` : "routine maker"}</p>
+            <h1>
+              Plan Your
+              <br />
+              <span className="accent-text">Academic Journey</span>
+            </h1>
           </div>
-        </div>
+        </div>  
         <div className="hdr-actions">
          <button className="btn primary sm" onClick={() => setShowAdmin(true)}>
   Admin
