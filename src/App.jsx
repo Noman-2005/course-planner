@@ -9,6 +9,7 @@ import { itemsFor } from "./plans.js";
 import { encodeShare, decodeShare } from "./share.js";
 import { findConflicts, overlaps, useLocalStorage, uid, fmt, fmtDur, toMin, slug, HUES } from "./utils.js";
 import CampusHero from "./CampusHero.jsx";
+import { playTick, isSoundOn, setSoundOn } from "./sound.js";
 import uiuLogo from "./assets/uiu-logo.png";
 
 const AdminModal = lazy(() => import("./AdminModal.jsx"));
@@ -195,6 +196,7 @@ export default function App() {
     const autoRef = useRef({ sig: "", list: [], i: 0 });
 
   const [theme, setTheme] = useState(() => document.documentElement.dataset.theme || "dark");
+  const [soundOn, setSoundOnState] = useState(() => isSoundOn());
   const [shared, setShared] = useState(null);
   const [open, setOpen] = useState(null);
   const [hideClash, setHideClash] = useState(false);
@@ -327,14 +329,22 @@ export default function App() {
     return codes;
   };
 
-  function addCourse(code) {
-    setAdded((a) => {
-      const list = Array.isArray(a) ? a : [];
-      return list.includes(code) ? list : [...list, code];
-    });
-    setOpen(code);
-    toast(`${code} added`);
-  }
+  function toggleSound() {
+  const next = !soundOn;
+  setSoundOn(next);
+  setSoundOnState(next);
+  if (next) playTick("select"); 
+}
+
+function addCourse(code) {
+  playTick("add");
+  setAdded((a) => {
+    const list = Array.isArray(a) ? a : [];
+    return list.includes(code) ? list : [...list, code];
+  });
+  setOpen(code);
+  toast(`${code} added`);
+}
 
   function dropCourse(c) {
     setAdded((a) => (Array.isArray(a) ? a : []).filter((x) => x !== c.code));
@@ -346,14 +356,15 @@ export default function App() {
     if (open === c.code) setOpen(null);
   }
 
-  function pick(code, sec) {
-    setPicks((p) => {
-      const n = { ...(p && typeof p === "object" ? p : {}) };
-      if (n[code] === sec) delete n[code];
-      else n[code] = sec;
-      return n;
-    });
-  }
+function pick(code, sec) {
+  playTick(picks[code] === sec ? "deselect" : "select");
+  setPicks((p) => {
+    const n = { ...(p && typeof p === "object" ? p : {}) };
+    if (n[code] === sec) delete n[code];
+    else n[code] = sec;
+    return n;
+  });
+}
 
       function autoPlan() {
     const valid = myCourses.filter((c) => c.sections.length);
@@ -572,9 +583,9 @@ export default function App() {
           </div>
           <div className="brand-t">
             <h1>
-              Plan Your
+              Plan your
               <br />
-              <span className="accent-text">Academic Journey</span>
+              <span className="accent-text">Academic journey</span>
             </h1>
           </div>
         </div>  
@@ -582,6 +593,16 @@ export default function App() {
          <button className="btn primary sm" onClick={() => setShowAdmin(true)}>
   Admin
 </button>
+
+<button
+  className="icon-btn"
+  onClick={toggleSound}
+  aria-label={soundOn ? "Mute click sounds" : "Unmute click sounds"}
+  aria-pressed={soundOn}
+>
+  <Icon name={soundOn ? "volume" : "volumeOff"} />
+</button>
+
           <button className="icon-btn" onClick={toggleTheme} aria-label="Toggle light and dark theme">
             <Icon name={theme === "dark" ? "sun" : "moon"} />
           </button>

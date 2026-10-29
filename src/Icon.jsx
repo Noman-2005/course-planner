@@ -52,6 +52,18 @@ const P = {
     </>
   ),
   bookmark: <path d="M6 3h12v18l-6-4-6 4V3z" />,
+  volume: (
+  <>
+    <path d="M4 9v6h4l5 4V5L8 9H4z" />
+    <path d="M16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12" />
+  </>
+),
+volumeOff: (
+  <>
+    <path d="M4 9v6h4l5 4V5L8 9H4z" />
+    <path d="M17 9l5 6M22 9l-5 6" />
+  </>
+),
 };
 
 export default function Icon({ name, size = 18 }) {
