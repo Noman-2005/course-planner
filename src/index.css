@@ -1640,6 +1640,58 @@ html[data-theme="light"] .uh-n * {
   }
 }
 
+/* ---------- compact header on mobile ---------- */
+@media (max-width: 560px) {
+  .hdr {
+    gap: 10px;
+  }
+
+  .brand {
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .logo,
+  .logo img {
+    height: 44px;
+  }
+
+  .brand-t h1 {
+    font-size: 17px;
+  }
+
+  /* three buttons -> one joined pill */
+  .hdr-actions {
+    gap: 0;
+    flex-shrink: 0;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--card);
+  }
+
+  .hdr-actions .btn.primary {
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .hdr-actions .icon-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-left: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .hdr-actions .btn:hover:not(:disabled),
+  .hdr-actions .icon-btn:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
