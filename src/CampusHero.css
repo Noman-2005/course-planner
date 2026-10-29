@@ -1,0 +1,196 @@
+/* ===== UIU campus hero (animated pictures) ===== */
+
+.uh {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1376 / 768;
+  max-height: 480px;
+  margin-bottom: 16px;
+  border-radius: 20px;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  background: #9fd0f5;
+  user-select: none;
+}
+
+html[data-theme="dark"] .uh {
+  background: #070b1c;
+}
+
+.uh-img,
+.uh-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.uh-img {
+  object-fit: cover;
+  object-position: 50% 50%;
+  pointer-events: none;
+}
+
+/* night picture fades in on top of the day picture */
+.uh-img-night {
+  opacity: 0;
+  transition: opacity 0.7s ease;
+}
+
+html[data-theme="dark"] .uh-img-night {
+  opacity: 1;
+}
+
+.uh-svg {
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.uh-fx {
+  mix-blend-mode: screen;
+}
+
+/* day / night overlay cross-fade */
+.uh-d,
+.uh-n {
+  transition: opacity 0.7s ease;
+}
+
+.uh-d { opacity: 1; }
+.uh-n { opacity: 0; }
+
+html[data-theme="dark"] .uh-d { opacity: 0; }
+html[data-theme="dark"] .uh-n { opacity: 1; }
+
+/* ---------- day ---------- */
+.uh-cloud {
+  animation: uh-drift var(--t, 120s) linear var(--d, 0s) infinite;
+}
+
+@keyframes uh-drift {
+  from { transform: translateX(-260px); }
+  to { transform: translateX(1640px); }
+}
+
+.uh-bird {
+  animation: uh-fly var(--t, 28s) linear var(--d, 0s) infinite;
+}
+
+.uh-wing {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: uh-flap 0.55s ease-in-out infinite alternate;
+}
+
+@keyframes uh-fly {
+  from { transform: translateX(-200px); }
+  to { transform: translateX(1700px); }
+}
+
+@keyframes uh-flap {
+  from { transform: scaleY(1); }
+  to { transform: scaleY(0.3); }
+}
+
+/* ---------- night ---------- */
+.uh-star {
+  animation: uh-tw var(--t, 3s) ease-in-out var(--d, 0s) infinite;
+}
+
+/* meteors: each one gets its own keyframes (generated in CampusHero.jsx) */
+.uh-meteor {
+  opacity: 0;
+}
+
+@keyframes uh-tw {
+  0%, 100% { opacity: 0.1; }
+  50% { opacity: 1; }
+}
+
+/* UIU neon: glow + tube flicker */
+.uh-neon-glow {
+  animation: uh-neon 6s infinite;
+}
+
+.uh-neon-off {
+  fill: #2a1a1c;
+  opacity: 0;
+  animation: uh-neonoff 6s infinite;
+}
+
+@keyframes uh-neon {
+  0%, 17%, 23%, 61%, 71%, 100% { opacity: 1; }
+  18% { opacity: 0.2; }
+  20% { opacity: 0.85; }
+  21.5% { opacity: 0.1; }
+  62% { opacity: 0.35; }
+  64% { opacity: 1; }
+  66% { opacity: 0.15; }
+  68.5% { opacity: 1; }
+}
+
+@keyframes uh-neonoff {
+  0%, 17%, 23%, 61%, 71%, 100% { opacity: 0; }
+  18% { opacity: 0.88; }
+  20% { opacity: 0.2; }
+  21.5% { opacity: 0.9; }
+  62% { opacity: 0.7; }
+  64% { opacity: 0; }
+  66% { opacity: 0.85; }
+  68.5% { opacity: 0; }
+}
+
+/* windows: some lit ones switch off, some dark ones switch on */
+.uh-off {
+  fill: #141d33;
+  opacity: 0;
+  animation: uh-blink var(--t, 10s) ease-in-out var(--d, 0s) infinite;
+}
+
+.uh-on {
+  fill: #ffcf7a;
+  opacity: 0;
+  animation: uh-blink var(--t, 10s) ease-in-out var(--d, 0s) infinite;
+}
+
+.uh-off { --peak: 0.82; }
+.uh-on { --peak: 0.62; }
+
+@keyframes uh-blink {
+  0%, 52% { opacity: 0; }
+  58%, 80% { opacity: var(--peak, 0.7); }
+  86%, 100% { opacity: 0; }
+}
+
+/* street lamps breathe */
+.uh-lamp {
+  animation: uh-lamp 5s ease-in-out var(--d, 0s) infinite;
+}
+
+@keyframes uh-lamp {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@media (max-width: 520px) {
+  .uh {
+    border-radius: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .uh * {
+    animation: none !important;
+  }
+  .uh-star { opacity: 0.7; }
+  .uh-lamp { opacity: 0.8; }
+}
+
+@media print {
+  .uh {
+    display: none !important;
+  }
+}
