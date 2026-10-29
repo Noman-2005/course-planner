@@ -1585,6 +1585,88 @@ html[data-theme="light"] .uh-n * {
   animation-play-state: paused !important;
 }
 
+/* ---------- auto plan priority selector ---------- */
+.auto-mode {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  margin: 2px 0 8px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.am-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 9px 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.15s;
+  transition-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.am-opt:hover:not(.on) {
+  color: var(--text);
+  background: var(--card);
+}
+
+.am-opt:active {
+  transform: scale(0.97);
+}
+
+.am-opt.on {
+  color: #fff;
+  background: linear-gradient(135deg, #ff6a00 0%, #e55f00 100%);
+  box-shadow: 0 8px 18px -8px rgba(255, 106, 0, 0.65);
+}
+
+.am-ico {
+  display: grid;
+  place-items: center;
+  height: 18px;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.am-name {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.am-sub {
+  font-size: 10.5px;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
+.am-hint {
+  margin: 0 2px 12px;
+  min-height: 32px; /* hint পাল্টালে layout যেন না লাফায় */
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+  animation: amFade 0.25s ease;
+}
+
+@keyframes amFade {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* ---------- responsive ---------- */
 
 @media (max-width: 960px) {

@@ -15,6 +15,30 @@ import uiuLogo from "./assets/uiu-logo.png";
 const AdminModal = lazy(() => import("./AdminModal.jsx"));
 const EMPTY = { program: "", term: "", courses: [] };
 
+const AUTO_MODES = [
+  {
+    id: "default",
+    icon: null,
+    name: "Smart",
+    sub: "Balanced",
+    hint: "Finds the combinations with the smallest gaps between your classes.",
+  },
+  {
+    id: "morning",
+    icon: "sun",
+    name: "Morning",
+    sub: "from 8:30 AM",
+    hint: "Starts your days at 8:30 AM and stacks classes back-to-back, with gaps kept small.",
+  },
+  {
+    id: "evening",
+    icon: "moon",
+    name: "Evening",
+    sub: "after 12:30 PM",
+    hint: "Keeps classes at 12:30 PM or later, back-to-back, so your mornings stay free.",
+  },
+];
+
 /* ---------- Auto plan helpers ---------- */
 
 function shuffleArr(arr) {
@@ -26,30 +50,65 @@ function shuffleArr(arr) {
   return a;
 }
 
-// Builds conflict-free section combinations, ranked by smallest total gap between classes.
-// Uses forward checking + a time limit so it never freezes the page.
-function buildAutoCombos(courses, maxCombos = 20000, timeMs = 600) {
+const MORNING_START = 8 * 60 + 30; // 8:30 AM
+const NOON_CUT = 12 * 60 + 30; // 12:30 PM
+// the user's explicit Morning/Evening choice counts 2x more than a gap minute (tweak if you like)
+const PREF_WEIGHT = 2;
+
+function groupByDay(chosen) {
+  const byDay = {};
+  for (const { s } of chosen) for (const d of s.days) (byDay[d] = byDay[d] || []).push(s);
+  for (const d in byDay) byDay[d].sort((p, q) => p.a - q.a);
+  return byDay;
+}
+
+// total idle time between classes (minutes)
+function gapOf(chosen) {
+  const byDay = groupByDay(chosen);
+  let total = 0;
+  for (const d in byDay) {
+    const list = byDay[d];
+    for (let i = 1; i < list.length; i++) total += Math.max(0, list[i].a - list[i - 1].b);
+  }
+  return total;
+}
+
+// how far a plan is from the chosen priority (0 = perfect)
+function prefPenalty(chosen, mode) {
+  if (mode === "default") return 0;
+  const byDay = groupByDay(chosen);
+  let p = 0;
+  for (const d in byDay) {
+    const list = byDay[d];
+    const first = list[0].a;
+    if (mode === "morning") {
+      p += Math.max(0, first - MORNING_START) * 0.5; // day should start at 8:30
+      for (const x of list) p += Math.max(0, x.a - NOON_CUT); // afternoon classes cost
+    } else {
+      p += Math.max(0, first - NOON_CUT) * 0.5; // day should start at 12:30
+      for (const x of list) p += Math.max(0, NOON_CUT - x.a); // morning classes cost
+    }
+  }
+  return p;
+}
+
+const inWindow = (s, mode) => (mode === "morning" ? s.a < NOON_CUT : s.a >= NOON_CUT);
+
+// Builds conflict-free section combinations.
+// Ranked by: (gap between classes) + (distance from morning/evening priority). Gap always counts.
+function buildAutoCombos(courses, mode = "default", maxCombos = 20000, timeMs = 600) {
+  const single = (s) => (mode === "default" ? 0 : prefPenalty([{ s }], mode));
   const base = courses
     .filter((c) => c.sections.length)
     .map((c) => ({
       code: c.code,
+      // shuffle for variety, then (if a priority is set) try the best-fitting sections first
       secs: shuffleArr(
         c.sections.map((s) => ({ sec: s.sec, days: s.days, a: toMin(s.start), b: toMin(s.end) }))
-      ),
+      ).sort((p, q) => single(p) - single(q)),
     }));
 
   const clash = (x, y) => x.a < y.b && y.a < x.b && x.days.some((d) => y.days.includes(d));
-
-  const gapScore = (chosen) => {
-    const byDay = {};
-    for (const { s } of chosen) for (const d of s.days) (byDay[d] = byDay[d] || []).push(s);
-    let total = 0;
-    for (const d in byDay) {
-      const list = byDay[d].sort((p, q) => p.a - q.a);
-      for (let i = 1; i < list.length; i++) total += Math.max(0, list[i].a - list[i - 1].b);
-    }
-    return total;
-  };
 
   const results = [];
   const chosen = [];
@@ -66,7 +125,14 @@ function buildAutoCombos(courses, maxCombos = 20000, timeMs = 600) {
     if (!remaining.length) {
       const picks = {};
       for (const { code, s } of chosen) picks[code] = s.sec;
-      results.push({ picks, score: gapScore(chosen) });
+      const gap = gapOf(chosen);
+      results.push({
+        picks,
+        gap,
+        score: gap + PREF_WEIGHT * prefPenalty(chosen, mode),
+        hit: mode === "default" ? 0 : chosen.filter(({ s }) => inWindow(s, mode)).length,
+        total: chosen.length,
+      });
       return;
     }
 
@@ -103,7 +169,6 @@ function buildAutoCombos(courses, maxCombos = 20000, timeMs = 600) {
   results.sort((p, q) => p.score - q.score);
   return { list: results, timedOut };
 }
-
 
 const comboKey = (picks, codes) => codes.map((c) => c + ":" + (picks ? picks[c] : "")).join("|");
 
@@ -174,6 +239,8 @@ export default function App() {
   const [picksRaw, setPicks] = useLocalStorage("cp-picks", {});
   const [plansRaw, setPlans] = useLocalStorage("cp-plans", []);
   const [titleRaw, setTitle] = useLocalStorage("cp-title", "My Semester Routine");
+  const [autoModeRaw, setAutoMode] = useLocalStorage("cp-auto-mode", "default");
+const autoMode = AUTO_MODES.some((m) => m.id === autoModeRaw) ? autoModeRaw : "default";
 
   const deptId = typeof deptRaw === "string" ? deptRaw : "";
   const added = Array.isArray(addedRaw) ? addedRaw.filter((x) => typeof x === "string") : [];
@@ -365,61 +432,69 @@ function pick(code, sec) {
     return n;
   });
 }
+    function autoPlan() {
+  const valid = myCourses.filter((c) => c.sections.length);
+  if (!valid.length) return;
 
-      function autoPlan() {
-    const valid = myCourses.filter((c) => c.sections.length);
-    if (!valid.length) return;
-
-    const codes = valid.map((c) => c.code).sort();
-    const sig = valid
+  const mode = autoMode;
+  const codes = valid.map((c) => c.code).sort();
+  // mode is part of the cache key, so switching mode rebuilds the list
+  const sig =
+    mode +
+    "#" +
+    valid
       .map((c) => c.code + "[" + c.sections.map((s) => `${s.sec}@${s.days.join("")}${s.start}-${s.end}`).join(",") + "]")
       .sort()
       .join("|");
 
-    const st = autoRef.current;
-    if (st.sig !== sig) {
-      const built = buildAutoCombos(myCourses);
-      if (!built.list.length) {
-        st.sig = ""; // don't cache a failed search
-        window.alert(
-          built.timedOut
-            ? "Too many courses to check quickly. Try removing a course or two and run Auto plan again."
-            : "No slot available. The courses you added can't fit together without a time clash. Remove a course or change a section and try again."
-        );
-        return;
-      }
-      st.sig = sig;
-      st.list = built.list;
-      st.i = 0;
-    }
-
-    const curKey = comboKey(picks, codes);
-    let next = null;
-    let wrapped = false;
-
-    for (let tries = 0; tries < st.list.length; tries++) {
-      if (st.i >= st.list.length) {
-        st.i = 0;
-        wrapped = true;
-      }
-      const cand = st.list[st.i++];
-      if (comboKey(cand.picks, codes) !== curKey) {
-        next = cand;
-        break;
-      }
-    }
-
-    if (!next) {
-      toast("This is the only possible combination");
+  const st = autoRef.current;
+  if (st.sig !== sig) {
+    const built = buildAutoCombos(myCourses, mode);
+    if (!built.list.length) {
+      st.sig = ""; // don't cache a failed search
+      window.alert(
+        built.timedOut
+          ? "Too many courses to check quickly. Try removing a course or two and run Auto plan again."
+          : "No slot available. The courses you added can't fit together without a time clash. Remove a course or change a section and try again."
+      );
       return;
     }
-
-    setPicks(next.picks);
-    toast(
-      (wrapped ? "All combinations shown, starting over · " : "Auto plan ready · ") +
-        (next.score === 0 ? "no gaps" : `total gap ${fmtDur(next.score)}`)
-    );
+    st.sig = sig;
+    st.list = built.list;
+    st.i = 0;
   }
+
+  const curKey = comboKey(picks, codes);
+  let next = null;
+  let wrapped = false;
+
+  for (let tries = 0; tries < st.list.length; tries++) {
+    if (st.i >= st.list.length) {
+      st.i = 0;
+      wrapped = true;
+    }
+    const cand = st.list[st.i++];
+    if (comboKey(cand.picks, codes) !== curKey) {
+      next = cand;
+      break;
+    }
+  }
+
+  if (!next) {
+    toast("This is the only possible combination");
+    return;
+  }
+
+  setPicks(next.picks);
+
+  const label = mode === "morning" ? "Morning plan" : mode === "evening" ? "Evening plan" : "Auto plan";
+  const gapTxt = next.gap === 0 ? "no gaps" : `total gap ${fmtDur(next.gap)}`;
+  const fitTxt =
+    mode === "default"
+      ? ""
+      : ` · ${next.hit}/${next.total} classes ${mode === "morning" ? "before" : "after"} 12:30 PM`;
+  toast((wrapped ? "All combinations shown, starting over · " : `${label} ready · `) + gapTxt + fitTxt);
+}
 
   function saveCustom(course, oldCode) {
     setCustom((list) => {
@@ -666,6 +741,30 @@ function pick(code, sec) {
               ✦ Auto plan
             </button>
           </div>
+
+          <div className="auto-mode" aria-label="Auto plan priority">
+  {AUTO_MODES.map((m) => (
+    <button
+      key={m.id}
+      type="button"
+      className={"am-opt" + (autoMode === m.id ? " on" : "")}
+      aria-pressed={autoMode === m.id}
+      onClick={() => {
+        setAutoMode(m.id);
+        playTick("select");
+      }}
+    >
+      <span className="am-ico" aria-hidden="true">
+        {m.icon ? <Icon name={m.icon} size={16} /> : "✦"}
+      </span>
+      <span className="am-name">{m.name}</span>
+      <span className="am-sub">{m.sub}</span>
+    </button>
+  ))}
+</div>
+<p className="am-hint" key={autoMode}>
+  {AUTO_MODES.find((m) => m.id === autoMode).hint}
+</p>
 
           <div className="sb-dept">
             <select
