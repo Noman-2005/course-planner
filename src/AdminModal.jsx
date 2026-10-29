@@ -4,6 +4,9 @@ import ReviewPanel from "./ReviewPanel.jsx";
 import { useEscape } from "./utils.js";
 
 const normId = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9_-]+/g, "").slice(0, 20);
+// default list name = department + term, so different terms / batches never overwrite each other
+const listId = (program, term) => normId([program, term].filter(Boolean).join("-"));
+const fileKey = (f) => `${f.name}|${f.size}|${f.lastModified}`;
 const UNAVAILABLE = "The server API is not available here. Use the deployed site (or set VITE_API_PROXY for local testing).";
 
 async function api(body) {
@@ -29,7 +32,7 @@ async function api(body) {
   return data;
 }
 
-function PublishDialog({ pub, setPub, existing, busy, err, onPublish, onBack }) {
+function PublishDialog({ pub, setPub, existing, pos, total, busy, err, onPublish, onBack }) {
   useEscape(onBack);
   const id = normId(pub.dept);
   const clash = existing.find((d) => d.id === id);
@@ -38,7 +41,7 @@ function PublishDialog({ pub, setPub, existing, busy, err, onPublish, onBack }) 
     <div className="overlay top">
       <div className="modal" role="dialog" aria-modal="true" aria-label="Publish list">
         <div className="m-head">
-          <h3>Publish for everyone</h3>
+          <h3>Publish for everyone{total > 1 ? ` · list ${pos} of ${total}` : ""}</h3>
         </div>
         <div className="m-body">
           <p className="muted">
@@ -46,8 +49,8 @@ function PublishDialog({ pub, setPub, existing, busy, err, onPublish, onBack }) 
           </p>
           <div className="row2">
             <label className="field">
-              <span>Department</span>
-              <input value={pub.dept} onChange={(e) => setPub({ ...pub, dept: e.target.value })} placeholder="e.g. BSCSE" autoFocus />
+              <span>List name (students pick this)</span>
+              <input value={pub.dept} onChange={(e) => setPub({ ...pub, dept: e.target.value })} placeholder="e.g. BSCSE-FALL26" autoFocus />
             </label>
             <label className="field">
               <span>Term</span>
@@ -56,7 +59,7 @@ function PublishDialog({ pub, setPub, existing, busy, err, onPublish, onBack }) 
           </div>
           {clash && (
             <div className="notice">
-              This will replace the current {clash.id} list ({clash.term || "no term"}).
+              A list named {clash.id} already exists{clash.term ? ` (${clash.term})` : ""}. Publishing will replace it. Change the list name to keep both.
             </div>
           )}
           {busy && (
@@ -87,7 +90,7 @@ export default function AdminModal({ departments, onClose, onPublished }) {
   const [pw, setPw] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [files, setFiles] = useState([]);
-  const [separate, setSeparate] = useState(false);
+  const [separate, setSeparate] = useState(true);
   const [dept, setDept] = useState("");
   const [term, setTerm] = useState("");
   const [busy, setBusy] = useState("");
@@ -95,6 +98,7 @@ export default function AdminModal({ departments, onClose, onPublished }) {
   const [msg, setMsg] = useState("");
   const [done, setDone] = useState([]);
   const [queue, setQueue] = useState([]);
+  const [total, setTotal] = useState(0);
   const [pub, setPub] = useState(null);
   const fileRef = useRef(null);
   const queueRef = useRef([]);
@@ -150,6 +154,7 @@ export default function AdminModal({ departments, onClose, onPublished }) {
       if (skipped.length) setMsg(`No courses found in: ${skipped.join("; ")}`);
       if (!results.length) return setErr("No courses were found. Try a clearer file.");
       setQueue(results);
+      setTotal(results.length);
     } catch (e) {
       setErr(e.message || "Something went wrong");
     } finally {
@@ -158,8 +163,12 @@ export default function AdminModal({ departments, onClose, onPublished }) {
   }
 
   function onReviewApply(courses) {
+    const base = separate ? listId(cur.program, cur.term) : normId(dept || listId(cur.program, cur.term));
+    let id = base;
+    // never overwrite a list that was published a moment ago in this same batch of files
+    for (let n = 2; id && done.includes(id) && n < 50; n++) id = normId(`${base.slice(0, 16)}-${n}`);
     setPub({
-      dept: separate ? normId(cur.program) : normId(dept || cur.program),
+      dept: id,
       term: separate ? cur.term || "" : term || cur.term || "",
       courses,
     });
@@ -271,7 +280,7 @@ export default function AdminModal({ departments, onClose, onPublished }) {
         </div>
         <div className="m-body">
           <p className="muted small">
-            Upload the faculty list (PDF or image). After you review and publish it, every student can build routines from it.
+            Upload one or more faculty lists (PDF or image). Each file becomes its own list; students pick the list they need from the dropdown.
           </p>
           <label className="field">
             <span>Admin password</span>
@@ -281,8 +290,13 @@ export default function AdminModal({ departments, onClose, onPublished }) {
             <span>Faculty list files</span>
             <div className="cat-tools">
               <button className="btn ghost sm" onClick={() => fileRef.current.click()} disabled={!!busy}>
-                Choose PDF / images
+                {files.length ? "Add more PDF / images" : "Choose PDF / images"}
               </button>
+              {files.length > 0 && (
+                <button className="btn ghost sm" onClick={() => setFiles([])} disabled={!!busy}>
+                  Clear all
+                </button>
+              )}
             </div>
             <input
               ref={fileRef}
@@ -291,21 +305,35 @@ export default function AdminModal({ departments, onClose, onPublished }) {
               multiple
               accept=".pdf,application/pdf,image/png,image/jpeg,image/webp"
               onChange={(e) => {
-                setFiles(Array.from(e.target.files));
+                const picked = Array.from(e.target.files);
+                setFiles((prev) => {
+                  const seen = new Set(prev.map(fileKey));
+                  return [...prev, ...picked.filter((f) => !seen.has(fileKey(f)))];
+                });
                 e.target.value = "";
               }}
             />
             {files.length > 0 && (
               <ul className="file-list">
                 {files.map((f) => (
-                  <li key={f.name + f.size}>{f.name}</li>
+                  <li key={fileKey(f)}>
+                    {f.name}{" "}
+                    <button
+                      type="button"
+                      className="linkbtn"
+                      onClick={() => setFiles((prev) => prev.filter((x) => fileKey(x) !== fileKey(f)))}
+                      disabled={!!busy}
+                    >
+                      remove
+                    </button>
+                  </li>
                 ))}
               </ul>
             )}
           </div>
           <label className="check">
             <input type="checkbox" checked={separate} onChange={(e) => setSeparate(e.target.checked)} />
-            <span>Each file is a different department</span>
+            <span>Each file is a separate list (recommended for multiple PDFs)</span>
           </label>
           {!separate && (
             <div className="row2">
@@ -334,7 +362,7 @@ export default function AdminModal({ departments, onClose, onPublished }) {
 
           {departments.length > 0 && (
             <details>
-              <summary>Published departments</summary>
+              <summary>Published lists</summary>
               <div className="plan-list" style={{ marginTop: 8 }}>
                 {departments.map((d) => (
                   <div className="plan" key={d.id}>
@@ -368,7 +396,9 @@ export default function AdminModal({ departments, onClose, onPublished }) {
         <PublishDialog
           pub={pub}
           setPub={setPub}
-          existing={departments}
+          existing={[...departments, ...done.filter((id) => !departments.some((d) => d.id === id)).map((id) => ({ id, term: "" }))]}
+          pos={total - queue.length + 1}
+          total={total}
           busy={busy}
           err={err}
           onPublish={publish}

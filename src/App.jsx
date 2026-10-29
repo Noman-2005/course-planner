@@ -657,9 +657,10 @@ export default function App() {
                 {depts === null ? "Loading…" : depts.length ? "Select your department…" : "No lists published yet"}
               </option>
               {(depts || []).map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.id}
-                  {d.term ? ` · ${d.term}` : ""}
+                                <option key={d.id} value={d.id}>
+                  {d.term && !d.id.toLowerCase().includes(String(d.term).toLowerCase())
+                    ? `${d.id} · ${d.term}`
+                    : d.id}
                 </option>
               ))}
             </select>
