@@ -693,7 +693,9 @@ function pick(code, sec) {
           </span>
         </div>
         <div className="stat card">
-          <span className="stat-l">Courses picked</span>
+         <span className="stat-l">
+  Courses<span className="stat-x"> picked</span>
+</span>
           <span className="stat-v">
             {shownItems.length} / {myCourses.length}
           </span>
