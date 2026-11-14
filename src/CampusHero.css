@@ -165,23 +165,37 @@ html[data-theme="dark"] .uh-n { opacity: 1; }
   86%, 100% { opacity: 0; }
 }
 
-/* ---------- airplane (Biman Dreamliner) ---------- */
+/* ---------- airplanes (Biman Dreamliner + Saudia 787, taking turns) ---------- */
+
+/*
+ * Timing: one full cycle = 120s = two turns of 60s.
+ *   - Biman  (plane 1) starts 4s after load, then every 120s
+ *   - Saudia (plane 2) starts 60s after Biman (4s + 60s = 64s), then every 120s
+ * So the sky shows: Biman -> Saudia -> Biman -> Saudia ...
+ *
+ * To change the speed: change the cycle (120s) and the Saudia delay together.
+ *   cycle = 2 x gap between planes,  Saudia delay = 4s + gap
+ */
 .uh-plane {
   opacity: 0;
-  animation: uh-plane 90s linear 4s infinite;
+  animation: uh-plane 120s linear 4s infinite;
 }
 
-/* flies for ~42s (slow = far away), then the sky stays empty for ~48s */
+.uh-plane-2 {
+  animation-delay: 64s;
+}
+
+/* each plane flies for ~28s (23.5% of 120s), then the sky stays empty until the other plane's turn */
 @keyframes uh-plane {
   0% {
     opacity: 1;
     transform: translate(-220px, 2px);
   }
-  47% {
+  23.5% {
     opacity: 1;
     transform: translate(1400px, -4px);
   }
-  47.1%,
+  23.6%,
   100% {
     opacity: 0;
     transform: translate(1400px, -4px);

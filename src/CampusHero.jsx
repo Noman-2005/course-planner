@@ -6,16 +6,19 @@ import lightImg from "./assets/uiu-light.jpg";
 
 import nightImg from "./assets/uiu-night.jpg";
 
-// AIRPLANE: transparent Biman Dreamliner picture (put plane.png in src/assets)
+// AIRPLANE 1: transparent Biman Dreamliner picture (put plane.png in src/assets)
 import planeImg from "./assets/plane.png";
+
+// AIRPLANE 2: transparent Saudia 787 picture (put saudia.png in src/assets)
+import planeImg2 from "./assets/saudia.png";
 
 /*
  * UIU campus hero.
  *
  * The two pictures (light / dark) are used as-is; everything that moves is drawn on top in SVG:
- * - day   : drifting clouds, flying birds, Biman Dreamliner passing by
+ * - day   : drifting clouds, flying birds, two airplanes passing by (Biman, then Saudia, taking turns)
  * - night : twinkling stars, meteors, flickering UIU neon, windows turning on/off, pulsing street lamps,
- *           Biman Dreamliner with lit windows + headlight
+ *           both airplanes with lit windows + headlight
  *
  * All coordinates are in the picture's own space (1376 x 768).
  */
@@ -25,7 +28,6 @@ const W = 1376;
 const H = 768;
 
 // Building windows found in the night picture: [x, y, w, h]
-
 const LIT = [
   [941, 244, 39, 17],
   [1253, 244, 103, 7],
@@ -87,12 +89,10 @@ const DARK = [
 
 // Exact sky silhouette (traced from the picture):
 // anything clipped to it passes BEHIND buildings and trees
-
 const SKY_PATH =
   "M-300 -300 L-300 190 L15 199 L30 196 L39 205 L43 216 L47 220 L47 225 L43 229 L45 233 L49 229 L59 228 L64 223 L70 222 L77 227 L87 227 L103 244 L100 254 L104 265 L96 273 L101 277 L110 277 L126 294 L125 297 L127 299 L132 295 L138 301 L152 329 L162 380 L172 396 L408 396 L410 394 L410 376 L416 370 L578 370 L580 368 L580 286 L586 280 L635 281 L637 279 L637 263 L643 257 L653 263 L687 263 L701 249 L705 251 L748 250 L750 248 L752 142 L758 136 L788 136 L796 127 L816 127 L824 136 L856 136 L864 127 L878 127 L888 136 L934 135 L941 144 L943 176 L945 178 L1061 177 L1067 183 L1065 188 L1068 191 L1069 217 L1071 219 L1122 218 L1128 224 L1127 229 L1133 235 L1185 234 L1187 232 L1191 207 L1197 201 L1220 201 L1227 195 L1247 195 L1251 192 L1268 191 L1274 195 L1363 195 L1700 191 L1700 -300 L1700 -300 L-300 -300Z";
 
 // Meteors always fall the same way: from upper right toward lower left.
-
 const METEOR_ANGLE = 158; // degrees, same for every meteor
 
 const METEOR_SPEED = 550; // changed from 850 to 550
@@ -108,10 +108,7 @@ const METEORS = [
       Math.abs(Math.cos((METEOR_ANGLE * Math.PI) / 180))
   );
 
-  const p0 = Math.max(
-    0,
-    100 - (dist / METEOR_SPEED / m.t) * 100
-  );
+  const p0 = Math.max(0, 100 - (dist / METEOR_SPEED / m.t) * 100);
 
   return { ...m, dist, p0 };
 });
@@ -131,8 +128,7 @@ const LAMPS = [
   { x: 1363, y: 526, r: 24 },
 ];
 
-// ---------- AIRPLANE: Biman Dreamliner (left -> right, far behind the campus) ----------
-
+// ---------- AIRPLANE 1: Biman Dreamliner (left -> right, far behind the campus) ----------
 const PLANE_IMG_W = 1887; // original picture size (do not change)
 
 const PLANE_IMG_H = 544;
@@ -144,7 +140,6 @@ const PLANE_Y = 70; // height in the sky. Smaller = higher
 const PLANE_S = PLANE_W / PLANE_IMG_W;
 
 // cabin windows in the plane picture: [x, y, w, h]
-
 const planeRow = (x0, n, step, y = 330, h = 12) =>
   Array.from({ length: n }, (_, i) => [x0 + i * step, y, 7, h]);
 
@@ -157,6 +152,24 @@ const PLANE_WINDOWS = [
   ...planeRow(1453, 9, 14.6),
 ];
 
+// ---------- AIRPLANE 2: Saudia 787 (same direction, same height, takes turns with plane 1) ----------
+const PLANE2_IMG_W = 1904; // original picture size (do not change)
+
+const PLANE2_IMG_H = 433;
+
+const PLANE2_S = PLANE_W / PLANE2_IMG_W; // same width as plane 1
+
+// line up the cabin-window row with plane 1, so both fly at the same height
+const PLANE2_Y = PLANE_Y + (336 * PLANE_S - 286 * PLANE2_S);
+
+// cabin windows in the Saudia picture: [x, y, w, h]
+const PLANE2_WINDOWS = [
+  397, 430, 447, 464, 484, 501, 519, 552, 587, 604, 620, 636, 652, 668, 732,
+  969, 987, 1005, 1022, 1039, 1056, 1072, 1088, 1104, 1121, 1139, 1155, 1172,
+  1189, 1206, 1223, 1240, 1256, 1291, 1342, 1359, 1375, 1394, 1411, 1428,
+  1445, 1461, 1477, 1492, 1522, 1538, 1553, 1583, 1616, 1633, 1669, 1715,
+].map((x) => [x, 281, 7, 11]);
+
 const rng = (seed) => {
   let s = seed;
 
@@ -165,7 +178,6 @@ const rng = (seed) => {
 
 // Stars are placed with a rough test;
 // exact clipping is done by the sky clipPath.
-
 function inSky(x, y) {
   if (x < 600 && y > 285) return false;
 
@@ -175,19 +187,12 @@ function inSky(x, y) {
 function Cloud({ s = 1, y = 0, t = 110, d = 0, o = 0.92 }) {
   return (
     <g transform={`translate(0 ${y}) scale(${s})`}>
-      <g
-        className="uh-cloud"
-        style={{ "--t": t + "s", "--d": d + "s" }}
-      >
+      <g className="uh-cloud" style={{ "--t": t + "s", "--d": d + "s" }}>
         <g fill="url(#uh-cloudfill)" opacity={o}>
           <ellipse cx="0" cy="12" rx="92" ry="15" />
-
           <circle cx="-34" cy="2" r="22" />
-
           <circle cx="-4" cy="-10" r="30" />
-
           <circle cx="30" cy="-2" r="24" />
-
           <circle cx="56" cy="6" r="16" />
         </g>
       </g>
@@ -195,20 +200,20 @@ function Cloud({ s = 1, y = 0, t = 110, d = 0, o = 0.92 }) {
   );
 }
 
-// AIRPLANE component: day picture, darkened night picture, night lights
+// AIRPLANE 1 component: day picture, darkened night picture, night lights
 function Plane() {
   return (
     <g transform={`translate(0 ${PLANE_Y})`}>
       <g className="uh-plane">
         <g transform={`scale(${PLANE_S})`}>
           {/* day: the picture as it is */}
-         <image
-  className="uh-plane-day"
-  href={planeImg}
-  width={PLANE_IMG_W}
-  height={PLANE_IMG_H}
-  filter="url(#uh-plane-haze)"
-/>
+          <image
+            className="uh-plane-day"
+            href={planeImg}
+            width={PLANE_IMG_W}
+            height={PLANE_IMG_H}
+            filter="url(#uh-plane-haze)"
+          />
 
           {/* night: same picture, darkened */}
           <image
@@ -269,6 +274,7 @@ function Plane() {
               <circle cx="160" cy="66" r="26" fill="url(#uh-plane-lamp)" />
               <circle cx="160" cy="66" r="7" fill="#fff" />
             </g>
+
             <g className="uh-plane-strobe" style={{ animationDelay: "0.1s" }}>
               <circle cx="142" cy="314" r="26" fill="url(#uh-plane-lamp)" />
               <circle cx="142" cy="314" r="7" fill="#fff" />
@@ -280,19 +286,110 @@ function Plane() {
   );
 }
 
+// AIRPLANE 2 component: Saudia 787 (same look and lighting as plane 1)
+function Plane2() {
+  return (
+    <g transform={`translate(0 ${PLANE2_Y})`}>
+      <g className="uh-plane uh-plane-2">
+        <g transform={`scale(${PLANE2_S})`}>
+          {/* day: the picture as it is */}
+          <image
+            className="uh-plane-day"
+            href={planeImg2}
+            width={PLANE2_IMG_W}
+            height={PLANE2_IMG_H}
+            filter="url(#uh-plane-haze)"
+          />
+
+          {/* night: same picture, darkened */}
+          <image
+            className="uh-plane-night"
+            href={planeImg2}
+            width={PLANE2_IMG_W}
+            height={PLANE2_IMG_H}
+            filter="url(#uh-plane-dim)"
+          />
+
+          {/* night lights */}
+          <g className="uh-plane-lights">
+            {/* headlight beam */}
+            <polygon
+              points="1884,321 2480,255 2480,470 1884,331"
+              fill="url(#uh-plane-beam)"
+            />
+
+            {/* window glow */}
+            <g filter="url(#uh-plane-blur)" opacity="0.9">
+              {PLANE2_WINDOWS.map(([x, y, w, h], i) => (
+                <rect
+                  key={i}
+                  x={x - 4}
+                  y={y - 4}
+                  width={w + 8}
+                  height={h + 8}
+                  rx="5"
+                  fill="#ffb84d"
+                />
+              ))}
+            </g>
+
+            {/* lit windows */}
+            {PLANE2_WINDOWS.map(([x, y, w, h], i) => (
+              <rect
+                key={i}
+                x={x - 1.5}
+                y={y - 1}
+                width={w + 3}
+                height={h + 2}
+                rx="2.5"
+                fill="#ffe3a3"
+                opacity={i % 7 === 3 ? 0.6 : 1}
+              />
+            ))}
+
+            {/* headlight */}
+            <circle cx="1884" cy="326" r="46" fill="url(#uh-plane-lamp)" />
+            <circle cx="1884" cy="326" r="9" fill="#fff" />
+
+            {/* red wing-tip light */}
+            <circle cx="640" cy="232" r="22" fill="url(#uh-plane-red)" />
+            <circle cx="640" cy="232" r="6" fill="#ff4a4a" />
+
+            {/* white strobes (tail fin + stabilizer) */}
+            <g className="uh-plane-strobe">
+              <circle cx="34" cy="22" r="26" fill="url(#uh-plane-lamp)" />
+              <circle cx="34" cy="22" r="7" fill="#fff" />
+            </g>
+
+            <g className="uh-plane-strobe" style={{ animationDelay: "0.1s" }}>
+              <circle cx="24" cy="247" r="26" fill="url(#uh-plane-lamp)" />
+              <circle cx="24" cy="247" r="7" fill="#fff" />
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  );
+}
+
 export default function CampusHero() {
-    const rootRef = useRef(null);
+  const rootRef = useRef(null);
 
   useEffect(() => {
     const el = rootRef.current;
+
     if (!el || typeof IntersectionObserver === "undefined") return;
+
     const io = new IntersectionObserver(
       ([entry]) => el.classList.toggle("uh-paused", !entry.isIntersecting),
       { threshold: 0 }
     );
+
     io.observe(el);
+
     return () => io.disconnect();
   }, []);
+
   const D = useMemo(() => {
     const r = rng(23);
 
@@ -369,7 +466,6 @@ export default function CampusHero() {
 
       {/* Permanent patch: hides birds baked into the light picture.
           It stays between the light and night pictures. */}
-
       <svg
         className="uh-svg"
         viewBox={`0 0 ${W} ${H}`}
@@ -385,31 +481,18 @@ export default function CampusHero() {
             y2="236"
           >
             <stop offset="0.000" stopColor="#b8ddf8" />
-
             <stop offset="0.077" stopColor="#b8ddf8" />
-
             <stop offset="0.154" stopColor="#b9def9" />
-
             <stop offset="0.231" stopColor="#bbdff9" />
-
             <stop offset="0.308" stopColor="#bbdff9" />
-
             <stop offset="0.385" stopColor="#bce0f8" />
-
             <stop offset="0.462" stopColor="#bee0f9" />
-
             <stop offset="0.538" stopColor="#c1e1fa" />
-
             <stop offset="0.615" stopColor="#c2e2f9" />
-
             <stop offset="0.692" stopColor="#c3e3f8" />
-
             <stop offset="0.769" stopColor="#c4e4f8" />
-
             <stop offset="0.846" stopColor="#c5e4f8" />
-
             <stop offset="0.923" stopColor="#c6e5f9" />
-
             <stop offset="1.000" stopColor="#c9e6f8" />
           </linearGradient>
         </defs>
@@ -431,86 +514,52 @@ export default function CampusHero() {
       />
 
       {/* Normal-blend layer */}
-
       <svg
         className="uh-svg"
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="xMidYMid slice"
       >
         <defs>
-          <linearGradient
-            id="uh-tail"
-            x1="1"
-            y1="0"
-            x2="0"
-            y2="0"
-          >
+          <linearGradient id="uh-tail" x1="1" y1="0" x2="0" y2="0">
             <stop offset="0" stopColor="#fff" stopOpacity="0.95" />
-
-            <stop
-              offset="0.35"
-              stopColor="#cfe0ff"
-              stopOpacity="0.45"
-            />
-
-            <stop
-              offset="1"
-              stopColor="#9db8ff"
-              stopOpacity="0"
-            />
+            <stop offset="0.35" stopColor="#cfe0ff" stopOpacity="0.45" />
+            <stop offset="1" stopColor="#9db8ff" stopOpacity="0" />
           </linearGradient>
 
           <radialGradient id="uh-head">
             <stop offset="0" stopColor="#fff" stopOpacity="0.95" />
-
-            <stop
-              offset="0.4"
-              stopColor="#dbe7ff"
-              stopOpacity="0.4"
-            />
-
-            <stop
-              offset="1"
-              stopColor="#bcd0ff"
-              stopOpacity="0"
-            />
+            <stop offset="0.4" stopColor="#dbe7ff" stopOpacity="0.4" />
+            <stop offset="1" stopColor="#bcd0ff" stopOpacity="0" />
           </radialGradient>
 
-          <linearGradient
-            id="uh-cloudfill"
-            x1="0"
-            y1="0"
-            x2="0"
-            y2="1"
-          >
+          <linearGradient id="uh-cloudfill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="#ffffff" />
-
             <stop offset="1" stopColor="#dbe9f6" />
           </linearGradient>
 
-                    <filter
-            id="uh-soft"
-            x="-10%"
-            y="-30%"
-            width="120%"
-            height="160%"
-          >
+          <filter id="uh-soft" x="-10%" y="-30%" width="120%" height="160%">
             <feGaussianBlur stdDeviation="1.4" />
           </filter>
 
-          {/* AIRPLANE: distance haze for daytime (soft + sky-blue tint) */}
-          <filter id="uh-plane-haze" colorInterpolationFilters="sRGB">
-            <feGaussianBlur stdDeviation="4" />
-            <feColorMatrix
-              type="matrix"
-              values="0.80 0 0 0 0.144
-                      0 0.80 0 0 0.174
-                      0 0 0.80 0 0.194
-                      0 0 0 0.92 0"
-            />
-          </filter>
+         {/* AIRPLANES: clear but slightly distant (used by both planes) */}
+<filter id="uh-plane-haze" colorInterpolationFilters="sRGB">
+  <feConvolveMatrix
+    order="3"
+    preserveAlpha="true"
+    kernelMatrix="0 -0.3 0
+                  -0.3 2.2 -0.3
+                  0 -0.3 0"
+  />
+  <feColorMatrix
+    type="matrix"
+    values="0.94 0 0 0 0.04
+            0 0.94 0 0 0.05
+            0 0 0.94 0 0.06
+            0 0 0 0.96 0"
+  />
+</filter>
 
-          {/* AIRPLANE: night darkening + lights */}
+          {/* AIRPLANES: night darkening + lights (used by both planes) */}
           <filter id="uh-plane-dim" colorInterpolationFilters="sRGB">
             <feColorMatrix
               type="matrix"
@@ -526,7 +575,7 @@ export default function CampusHero() {
             filterUnits="userSpaceOnUse"
             x="0"
             y="250"
-            width="1887"
+            width="1904"
             height="200"
           >
             <feGaussianBlur stdDeviation="7" />
@@ -554,25 +603,17 @@ export default function CampusHero() {
         </defs>
 
         {/* ---------- DAY ---------- */}
-
         <g className="uh-d">
           {/* Clouds + birds: visible only against the sky,
               hidden behind buildings and trees. */}
-
           <g clipPath="url(#uh-sky)">
             <Cloud s={1.35} y={46} t={120} d={-30} />
-
             <Cloud s={0.9} y={98} t={95} d={-70} o={0.85} />
-
             <Cloud s={1.1} y={28} t={150} d={-110} o={0.8} />
-
             <Cloud s={0.7} y={128} t={85} d={-15} o={0.8} />
 
             {D.birds.map((b, i) => (
-              <g
-                key={i}
-                transform={`translate(0 ${b.y}) scale(${b.s})`}
-              >
+              <g key={i} transform={`translate(0 ${b.y}) scale(${b.s})`}>
                 <g
                   className="uh-bird"
                   style={{ "--t": b.t + "s", "--d": b.d + "s" }}
@@ -592,7 +633,6 @@ export default function CampusHero() {
         </g>
 
         {/* ---------- NIGHT ---------- */}
-
         <g className="uh-n">
           <g clipPath="url(#uh-sky)">
             {D.stars.map((s, i) => (
@@ -622,9 +662,7 @@ export default function CampusHero() {
                     d={`M0 -1.7 L0 1.7 L${-m.len} 0 Z`}
                     fill="url(#uh-tail)"
                   />
-
                   <circle r="6" fill="url(#uh-head)" />
-
                   <circle r="1.7" fill="#fff" />
                 </g>
               </g>
@@ -632,7 +670,6 @@ export default function CampusHero() {
           </g>
 
           {/* Windows switching off */}
-
           <g filter="url(#uh-soft)">
             {D.winOff.map(({ w, t, d, k }) => (
               <rect
@@ -649,7 +686,6 @@ export default function CampusHero() {
           </g>
 
           {/* UIU neon dims for a moment */}
-
           <g filter="url(#uh-soft)">
             <rect
               className="uh-neon-off"
@@ -662,15 +698,14 @@ export default function CampusHero() {
           </g>
         </g>
 
-        {/* ---------- AIRPLANE (day + night) ---------- */}
-
+        {/* ---------- AIRPLANES (day + night): Biman, then Saudia, taking turns ---------- */}
         <g clipPath="url(#uh-sky)">
           <Plane />
+          <Plane2 />
         </g>
       </svg>
 
       {/* Light-adding layer: glows, lit windows, lamps */}
-
       <svg
         className="uh-svg uh-fx"
         viewBox={`0 0 ${W} ${H}`}
@@ -678,52 +713,18 @@ export default function CampusHero() {
       >
         <defs>
           <radialGradient id="uh-neon">
-            <stop
-              offset="0"
-              stopColor="#ff7a1a"
-              stopOpacity="0.75"
-            />
-
-            <stop
-              offset="0.55"
-              stopColor="#ff5a00"
-              stopOpacity="0.28"
-            />
-
-            <stop
-              offset="1"
-              stopColor="#ff5a00"
-              stopOpacity="0"
-            />
+            <stop offset="0" stopColor="#ff7a1a" stopOpacity="0.75" />
+            <stop offset="0.55" stopColor="#ff5a00" stopOpacity="0.28" />
+            <stop offset="1" stopColor="#ff5a00" stopOpacity="0" />
           </radialGradient>
 
           <radialGradient id="uh-lamp">
-            <stop
-              offset="0"
-              stopColor="#ffd98a"
-              stopOpacity="0.85"
-            />
-
-            <stop
-              offset="0.45"
-              stopColor="#ffc25a"
-              stopOpacity="0.3"
-            />
-
-            <stop
-              offset="1"
-              stopColor="#ffb040"
-              stopOpacity="0"
-            />
+            <stop offset="0" stopColor="#ffd98a" stopOpacity="0.85" />
+            <stop offset="0.45" stopColor="#ffc25a" stopOpacity="0.3" />
+            <stop offset="1" stopColor="#ffb040" stopOpacity="0" />
           </radialGradient>
 
-          <filter
-            id="uh-soft3"
-            x="-10%"
-            y="-30%"
-            width="120%"
-            height="160%"
-          >
+          <filter id="uh-soft3" x="-10%" y="-30%" width="120%" height="160%">
             <feGaussianBlur stdDeviation="1.6" />
           </filter>
         </defs>
