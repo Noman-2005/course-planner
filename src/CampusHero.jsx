@@ -6,12 +6,16 @@ import lightImg from "./assets/uiu-light.jpg";
 
 import nightImg from "./assets/uiu-night.jpg";
 
+// AIRPLANE: transparent Biman Dreamliner picture (put plane.png in src/assets)
+import planeImg from "./assets/plane.png";
+
 /*
  * UIU campus hero.
  *
  * The two pictures (light / dark) are used as-is; everything that moves is drawn on top in SVG:
- * - day   : drifting clouds, flying birds
- * - night : twinkling stars, meteors, flickering UIU neon, windows turning on/off, pulsing street lamps
+ * - day   : drifting clouds, flying birds, Biman Dreamliner passing by
+ * - night : twinkling stars, meteors, flickering UIU neon, windows turning on/off, pulsing street lamps,
+ *           Biman Dreamliner with lit windows + headlight
  *
  * All coordinates are in the picture's own space (1376 x 768).
  */
@@ -127,6 +131,32 @@ const LAMPS = [
   { x: 1363, y: 526, r: 24 },
 ];
 
+// ---------- AIRPLANE: Biman Dreamliner (left -> right, far behind the campus) ----------
+
+const PLANE_IMG_W = 1887; // original picture size (do not change)
+
+const PLANE_IMG_H = 544;
+
+const PLANE_W = 190; // plane width in the scene (scene is 1376 wide). Bigger = bigger plane
+
+const PLANE_Y = 70; // height in the sky. Smaller = higher
+
+const PLANE_S = PLANE_W / PLANE_IMG_W;
+
+// cabin windows in the plane picture: [x, y, w, h]
+
+const planeRow = (x0, n, step, y = 330, h = 12) =>
+  Array.from({ length: n }, (_, i) => [x0 + i * step, y, 7, h]);
+
+const PLANE_WINDOWS = [
+  ...planeRow(491, 8, 14.3),
+  ...planeRow(619, 14, 14.3),
+  ...planeRow(953, 19, 14.67, 331, 10),
+  ...planeRow(1287, 3, 15),
+  ...planeRow(1336, 7, 14.7),
+  ...planeRow(1453, 9, 14.6),
+];
+
 const rng = (seed) => {
   let s = seed;
 
@@ -159,6 +189,91 @@ function Cloud({ s = 1, y = 0, t = 110, d = 0, o = 0.92 }) {
           <circle cx="30" cy="-2" r="24" />
 
           <circle cx="56" cy="6" r="16" />
+        </g>
+      </g>
+    </g>
+  );
+}
+
+// AIRPLANE component: day picture, darkened night picture, night lights
+function Plane() {
+  return (
+    <g transform={`translate(0 ${PLANE_Y})`}>
+      <g className="uh-plane">
+        <g transform={`scale(${PLANE_S})`}>
+          {/* day: the picture as it is */}
+         <image
+  className="uh-plane-day"
+  href={planeImg}
+  width={PLANE_IMG_W}
+  height={PLANE_IMG_H}
+  filter="url(#uh-plane-haze)"
+/>
+
+          {/* night: same picture, darkened */}
+          <image
+            className="uh-plane-night"
+            href={planeImg}
+            width={PLANE_IMG_W}
+            height={PLANE_IMG_H}
+            filter="url(#uh-plane-dim)"
+          />
+
+          {/* night lights */}
+          <g className="uh-plane-lights">
+            {/* headlight beam */}
+            <polygon
+              points="1765,368 2360,300 2360,540 1765,380"
+              fill="url(#uh-plane-beam)"
+            />
+
+            {/* window glow */}
+            <g filter="url(#uh-plane-blur)" opacity="0.9">
+              {PLANE_WINDOWS.map(([x, y, w, h], i) => (
+                <rect
+                  key={i}
+                  x={x - 4}
+                  y={y - 4}
+                  width={w + 8}
+                  height={h + 8}
+                  rx="5"
+                  fill="#ffb84d"
+                />
+              ))}
+            </g>
+
+            {/* lit windows */}
+            {PLANE_WINDOWS.map(([x, y, w, h], i) => (
+              <rect
+                key={i}
+                x={x - 1.5}
+                y={y - 1}
+                width={w + 3}
+                height={h + 2}
+                rx="2.5"
+                fill="#ffe3a3"
+                opacity={i % 7 === 3 ? 0.6 : 1}
+              />
+            ))}
+
+            {/* headlight */}
+            <circle cx="1765" cy="374" r="46" fill="url(#uh-plane-lamp)" />
+            <circle cx="1765" cy="374" r="9" fill="#fff" />
+
+            {/* red wing-tip light */}
+            <circle cx="658" cy="217" r="22" fill="url(#uh-plane-red)" />
+            <circle cx="658" cy="217" r="6" fill="#ff4a4a" />
+
+            {/* white strobes (tail + stabilizer) */}
+            <g className="uh-plane-strobe">
+              <circle cx="160" cy="66" r="26" fill="url(#uh-plane-lamp)" />
+              <circle cx="160" cy="66" r="7" fill="#fff" />
+            </g>
+            <g className="uh-plane-strobe" style={{ animationDelay: "0.1s" }}>
+              <circle cx="142" cy="314" r="26" fill="url(#uh-plane-lamp)" />
+              <circle cx="142" cy="314" r="7" fill="#fff" />
+            </g>
+          </g>
         </g>
       </g>
     </g>
@@ -373,7 +488,7 @@ export default function CampusHero() {
             <stop offset="1" stopColor="#dbe9f6" />
           </linearGradient>
 
-          <filter
+                    <filter
             id="uh-soft"
             x="-10%"
             y="-30%"
@@ -382,7 +497,58 @@ export default function CampusHero() {
           >
             <feGaussianBlur stdDeviation="1.4" />
           </filter>
-                    <clipPath id="uh-sky">
+
+          {/* AIRPLANE: distance haze for daytime (soft + sky-blue tint) */}
+          <filter id="uh-plane-haze" colorInterpolationFilters="sRGB">
+            <feGaussianBlur stdDeviation="4" />
+            <feColorMatrix
+              type="matrix"
+              values="0.80 0 0 0 0.144
+                      0 0.80 0 0 0.174
+                      0 0 0.80 0 0.194
+                      0 0 0 0.92 0"
+            />
+          </filter>
+
+          {/* AIRPLANE: night darkening + lights */}
+          <filter id="uh-plane-dim" colorInterpolationFilters="sRGB">
+            <feColorMatrix
+              type="matrix"
+              values="0.30 0 0 0 0.01
+                      0 0.34 0 0 0.015
+                      0 0 0.48 0 0.04
+                      0 0 0 1 0"
+            />
+          </filter>
+
+          <filter
+            id="uh-plane-blur"
+            filterUnits="userSpaceOnUse"
+            x="0"
+            y="250"
+            width="1887"
+            height="200"
+          >
+            <feGaussianBlur stdDeviation="7" />
+          </filter>
+
+          <linearGradient id="uh-plane-beam" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#fff6d6" stopOpacity="0.6" />
+            <stop offset="1" stopColor="#fff6d6" stopOpacity="0" />
+          </linearGradient>
+
+          <radialGradient id="uh-plane-lamp">
+            <stop offset="0" stopColor="#fff" stopOpacity="0.95" />
+            <stop offset="0.4" stopColor="#fff2c8" stopOpacity="0.4" />
+            <stop offset="1" stopColor="#fff2c8" stopOpacity="0" />
+          </radialGradient>
+
+          <radialGradient id="uh-plane-red">
+            <stop offset="0" stopColor="#ff3030" stopOpacity="0.9" />
+            <stop offset="1" stopColor="#ff3030" stopOpacity="0" />
+          </radialGradient>
+
+          <clipPath id="uh-sky">
             <path d={SKY_PATH} />
           </clipPath>
         </defs>
@@ -494,6 +660,12 @@ export default function CampusHero() {
               rx="8"
             />
           </g>
+        </g>
+
+        {/* ---------- AIRPLANE (day + night) ---------- */}
+
+        <g clipPath="url(#uh-sky)">
+          <Plane />
         </g>
       </svg>
 

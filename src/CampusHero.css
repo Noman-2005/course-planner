@@ -165,6 +165,57 @@ html[data-theme="dark"] .uh-n { opacity: 1; }
   86%, 100% { opacity: 0; }
 }
 
+/* ---------- airplane (Biman Dreamliner) ---------- */
+.uh-plane {
+  opacity: 0;
+  animation: uh-plane 90s linear 4s infinite;
+}
+
+/* flies for ~42s (slow = far away), then the sky stays empty for ~48s */
+@keyframes uh-plane {
+  0% {
+    opacity: 1;
+    transform: translate(-220px, 2px);
+  }
+  47% {
+    opacity: 1;
+    transform: translate(1400px, -4px);
+  }
+  47.1%,
+  100% {
+    opacity: 0;
+    transform: translate(1400px, -4px);
+  }
+}
+
+.uh-plane-day,
+.uh-plane-night,
+.uh-plane-lights {
+  transition: opacity 0.7s ease;
+}
+
+.uh-plane-day { opacity: 1; }
+.uh-plane-night,
+.uh-plane-lights { opacity: 0; }
+
+html[data-theme="dark"] .uh-plane-day { opacity: 0; }
+html[data-theme="dark"] .uh-plane-night,
+html[data-theme="dark"] .uh-plane-lights { opacity: 1; }
+
+/* blinking white strobes */
+.uh-plane-strobe {
+  opacity: 0;
+  animation: uh-strobe 1.8s linear infinite;
+}
+
+@keyframes uh-strobe {
+  0%, 100% { opacity: 0; }
+  4% { opacity: 1; }
+  8% { opacity: 0; }
+  14% { opacity: 1; }
+  18% { opacity: 0; }
+}
+
 /* street lamps breathe */
 .uh-lamp {
   animation: uh-lamp 5s ease-in-out var(--d, 0s) infinite;
