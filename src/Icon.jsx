@@ -64,6 +64,26 @@ volumeOff: (
     <path d="M17 9l5 6M22 9l-5 6" />
   </>
 ),
+  more: (
+    <>
+      <circle cx="5" cy="12" r="1.7" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.7" fill="currentColor" />
+      <circle cx="19" cy="12" r="1.7" fill="currentColor" />
+    </>
+  ),
+  cap: (
+    <>
+      <path d="M2 9l10-5 10 5-10 5L2 9z" />
+      <path d="M6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5" />
+      <path d="M22 9v6" />
+    </>
+  ),
+  lock: (
+    <>
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V8a4 4 0 018 0v3" />
+    </>
+  ),
 };
 
 export default function Icon({ name, size = 18 }) {

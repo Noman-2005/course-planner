@@ -13,6 +13,7 @@ import { playTick, isSoundOn, setSoundOn } from "./sound.js";
 import uiuLogo from "./assets/uiu-logo.png";
 
 const AdminModal = lazy(() => import("./AdminModal.jsx"));
+const GraduationTracker = lazy(() => import("./GraduationTracker.jsx"));
 const EMPTY = { program: "", term: "", courses: [] };
 
 const AUTO_MODES = [
@@ -272,6 +273,23 @@ const autoMode = AUTO_MODES.some((m) => m.id === autoModeRaw) ? autoModeRaw : "d
   const [showPlans, setShowPlans] = useState(false);
   const [showIcs, setShowIcs] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+    const [showGrad, setShowGrad] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const down = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+    };
+    const key = (e) => e.key === "Escape" && setMenuOpen(false);
+    document.addEventListener("pointerdown", down);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("pointerdown", down);
+      document.removeEventListener("keydown", key);
+    };
+  }, [menuOpen]);
   const [detail, setDetail] = useState(null);
   const [toastMsg, setToastMsg] = useState("");
   const [depts, setDepts] = useState(null); // null = loading
@@ -664,23 +682,55 @@ function pick(code, sec) {
             </h1>
           </div>
         </div>  
-        <div className="hdr-actions">
-         <button className="btn primary sm" onClick={() => setShowAdmin(true)}>
-  Admin
-</button>
-
-<button
-  className="icon-btn"
-  onClick={toggleSound}
-  aria-label={soundOn ? "Mute click sounds" : "Unmute click sounds"}
-  aria-pressed={soundOn}
->
-  <Icon name={soundOn ? "volume" : "volumeOff"} />
-</button>
-
+                <div className="hdr-actions">
           <button className="icon-btn" onClick={toggleTheme} aria-label="Toggle light and dark theme">
             <Icon name={theme === "dark" ? "sun" : "moon"} />
           </button>
+
+          <button
+            className="icon-btn"
+            onClick={toggleSound}
+            aria-label={soundOn ? "Mute click sounds" : "Unmute click sounds"}
+            aria-pressed={soundOn}
+          >
+            <Icon name={soundOn ? "volume" : "volumeOff"} />
+          </button>
+
+          <div className="more" ref={menuRef}>
+            <button
+              className="icon-btn"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-label="More options"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+            >
+              <Icon name="more" />
+            </button>
+            {menuOpen && (
+              <div className="more-menu" role="menu">
+                <button
+                  className="more-item"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setShowAdmin(true);
+                  }}
+                >
+                  <Icon name="lock" size={16} /> Admin
+                </button>
+                <button
+                  className="more-item"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setShowGrad(true);
+                  }}
+                >
+                  <Icon name="cap" size={16} /> Graduation Tracker
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
             <CampusHero />
@@ -948,6 +998,16 @@ function pick(code, sec) {
       {showAdmin && (
         <Suspense fallback={null}>
           <AdminModal departments={depts || []} onClose={() => setShowAdmin(false)} onPublished={loadList} />
+        </Suspense>
+      )}
+            {showGrad && (
+        <Suspense fallback={null}>
+          <GraduationTracker
+            offered={base.courses.map((c) => c.code)}
+            added={added}
+            onAddToPlanner={addCourse}
+            onClose={() => setShowGrad(false)}
+          />
         </Suspense>
       )}
       {showPlans && (
