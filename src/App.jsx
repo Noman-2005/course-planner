@@ -694,16 +694,13 @@ function pick(code, sec) {
 
   return (
     <div className="app">
-                  {profileName && (
-        <p className="welcome">
-          <span className="welcome-av" aria-hidden="true">
-            {Array.from(profileName.trim())[0]?.toUpperCase()}
-          </span>
-          <span className="welcome-t">Welcome,</span>
-          <b>{profileName}</b>
-          <span className="welcome-x">!</span>
-        </p>
-      )}
+               {profileName && (
+  <p className="welcome">
+    <i className="welcome-dot" aria-hidden="true" />
+    <span className="welcome-t">Welcome</span>
+    <b>{profileName}</b>
+  </p>
+)}   
       <header className="hdr">
                     <div className="brand">
           <div className="logo" aria-hidden="true">

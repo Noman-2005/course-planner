@@ -160,15 +160,14 @@ const PLANE2_IMG_H = 433;
 const PLANE2_S = PLANE_W / PLANE2_IMG_W; // same width as plane 1
 
 // line up the cabin-window row with plane 1, so both fly at the same height
-const PLANE2_Y = PLANE_Y + (336 * PLANE_S - 286 * PLANE2_S);
+const PLANE2_Y = PLANE_Y + (336 * PLANE_S - 297 * PLANE2_S);
 
 // cabin windows in the Saudia picture: [x, y, w, h]
 const PLANE2_WINDOWS = [
-  397, 430, 447, 464, 484, 501, 519, 552, 587, 604, 620, 636, 652, 668, 732,
-  969, 987, 1005, 1022, 1039, 1056, 1072, 1088, 1104, 1121, 1139, 1155, 1172,
-  1189, 1206, 1223, 1240, 1256, 1291, 1342, 1359, 1375, 1394, 1411, 1428,
-  1445, 1461, 1477, 1492, 1522, 1538, 1553, 1583, 1616, 1633, 1669, 1715,
-].map((x) => [x, 281, 7, 11]);
+  518, 533, 592, 607, 622, 637, 652, 667, 682, 697, 713, 728, 743, 758, 773,
+  960, 976, 991, 1007, 1022, 1038, 1053, 1068, 1084, 1099, 1115, 1130, 1146,
+  1161, 1176, 1192, 1207, 1223, 1301, 1316,
+].map((x) => [x, 291, 7, 11]);
 
 const rng = (seed) => {
   let s = seed;
@@ -311,61 +310,61 @@ function Plane2() {
           />
 
           {/* night lights */}
-          <g className="uh-plane-lights">
-            {/* headlight beam */}
-            <polygon
-              points="1884,321 2480,255 2480,470 1884,331"
-              fill="url(#uh-plane-beam)"
-            />
+<g className="uh-plane-lights">
+  {/* headlight beam */}
+  <polygon
+    points="1794,309 2390,243 2390,458 1794,319"
+    fill="url(#uh-plane-beam)"
+  />
 
-            {/* window glow */}
-            <g filter="url(#uh-plane-blur)" opacity="0.9">
-              {PLANE2_WINDOWS.map(([x, y, w, h], i) => (
-                <rect
-                  key={i}
-                  x={x - 4}
-                  y={y - 4}
-                  width={w + 8}
-                  height={h + 8}
-                  rx="5"
-                  fill="#ffb84d"
-                />
-              ))}
-            </g>
+  {/* window glow */}
+  <g filter="url(#uh-plane-blur)" opacity="0.9">
+    {PLANE2_WINDOWS.map(([x, y, w, h], i) => (
+      <rect
+        key={i}
+        x={x - 4}
+        y={y - 4}
+        width={w + 8}
+        height={h + 8}
+        rx="5"
+        fill="#ffb84d"
+      />
+    ))}
+  </g>
 
-            {/* lit windows */}
-            {PLANE2_WINDOWS.map(([x, y, w, h], i) => (
-              <rect
-                key={i}
-                x={x - 1.5}
-                y={y - 1}
-                width={w + 3}
-                height={h + 2}
-                rx="2.5"
-                fill="#ffe3a3"
-                opacity={i % 7 === 3 ? 0.6 : 1}
-              />
-            ))}
+  {/* lit windows */}
+  {PLANE2_WINDOWS.map(([x, y, w, h], i) => (
+    <rect
+      key={i}
+      x={x - 1.5}
+      y={y - 1}
+      width={w + 3}
+      height={h + 2}
+      rx="2.5"
+      fill="#ffe3a3"
+      opacity={i % 7 === 3 ? 0.6 : 1}
+    />
+  ))}
 
-            {/* headlight */}
-            <circle cx="1884" cy="326" r="46" fill="url(#uh-plane-lamp)" />
-            <circle cx="1884" cy="326" r="9" fill="#fff" />
+  {/* headlight */}
+  <circle cx="1794" cy="314" r="46" fill="url(#uh-plane-lamp)" />
+  <circle cx="1794" cy="314" r="9" fill="#fff" />
 
-            {/* red wing-tip light */}
-            <circle cx="640" cy="232" r="22" fill="url(#uh-plane-red)" />
-            <circle cx="640" cy="232" r="6" fill="#ff4a4a" />
+  {/* red wing-tip light */}
+  <circle cx="640" cy="176" r="22" fill="url(#uh-plane-red)" />
+  <circle cx="640" cy="176" r="6" fill="#ff4a4a" />
 
-            {/* white strobes (tail fin + stabilizer) */}
-            <g className="uh-plane-strobe">
-              <circle cx="34" cy="22" r="26" fill="url(#uh-plane-lamp)" />
-              <circle cx="34" cy="22" r="7" fill="#fff" />
-            </g>
+  {/* white strobes (tail fin + stabilizer) */}
+  <g className="uh-plane-strobe">
+    <circle cx="112" cy="26" r="26" fill="url(#uh-plane-lamp)" />
+    <circle cx="112" cy="26" r="7" fill="#fff" />
+  </g>
 
-            <g className="uh-plane-strobe" style={{ animationDelay: "0.1s" }}>
-              <circle cx="24" cy="247" r="26" fill="url(#uh-plane-lamp)" />
-              <circle cx="24" cy="247" r="7" fill="#fff" />
-            </g>
-          </g>
+  <g className="uh-plane-strobe" style={{ animationDelay: "0.1s" }}>
+    <circle cx="103" cy="272" r="26" fill="url(#uh-plane-lamp)" />
+    <circle cx="103" cy="272" r="7" fill="#fff" />
+  </g>
+</g>
         </g>
       </g>
     </g>
