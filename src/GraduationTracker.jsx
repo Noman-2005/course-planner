@@ -19,7 +19,7 @@ export default function GraduationTracker({ offered = [], added = [], onAddToPla
   const [tab, setTab] = useState("courses");
   const [open, setOpen] = useState(null);
   const [q, setQ] = useState("");
-  const [maxCr, setMaxCr] = useState(15);
+  const [maxCr, setMaxCr] = useState(13);
   const [onlyOffered, setOnlyOffered] = useState(true);
   const [manual, setManual] = useState(null);
 
@@ -212,7 +212,11 @@ export default function GraduationTracker({ offered = [], added = [], onAddToPla
                 </div>
               )}
 
-              <h4>Eligible courses · tap to select</h4>
+                            <h4>Eligible courses · tap to select</h4>
+              <div className="gt-note muted small">
+                <span>✓ Listed because all prerequisites are completed (running courses count as done)</span>
+                <span>⏱ Auto-selected so that no exam times clash. If you pick manually, clashes show in red above</span>
+              </div>
               {list.length === 0 && (
                 <div className="empty">
                   <b>Nothing eligible yet</b>

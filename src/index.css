@@ -1963,3 +1963,15 @@ html[data-theme="light"] .uh-n * {
 .gt-tick { font-weight: 700; color: var(--accent); width: 18px; text-align: center; }
 .gt-ctl { display: flex; align-items: center; gap: 12px; }
 .gt-ctl input[type="range"] { flex: 1; padding: 0; accent-color: var(--accent); }
+/* 3-dot menu must not be clipped by the joined mobile pill */
+@media (max-width: 560px) {
+  .hdr-actions {
+    overflow: visible;
+  }
+
+  .more-menu {
+    right: 0;
+    min-width: 200px;
+  }
+}
+.gt-note { display: flex; flex-direction: column; gap: 3px; margin: -2px 0 4px; }

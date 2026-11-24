@@ -440,6 +440,16 @@ function addCourse(code) {
     });
     if (open === c.code) setOpen(null);
   }
+    function removeAll() {
+    if (!myCourses.length) return;
+    if (!window.confirm(`Remove all ${myCourses.length} courses from your list?`)) return;
+    playTick("deselect");
+    setAdded([]);
+    setCustom([]);
+    setPicks({});
+    setOpen(null);
+    toast("All courses removed");
+  }
 
 function pick(code, sec) {
   playTick(picks[code] === sec ? "deselect" : "select");
@@ -889,12 +899,15 @@ function pick(code, sec) {
               <span>Hide clashing sections</span>
             </label>
           </div>
-          <div className="sb-row">
+                    <div className="sb-row">
             <button className="btn ghost sm" onClick={() => setFormFor(null)}>
               <Icon name="plus" size={14} /> Custom
             </button>
             <button className="btn ghost sm" onClick={() => setPicks({})}>
               Reset
+            </button>
+            <button className="btn ghost sm danger" onClick={removeAll} disabled={!myCourses.length}>
+              <Icon name="trash" size={14} /> Remove all
             </button>
           </div>
 
