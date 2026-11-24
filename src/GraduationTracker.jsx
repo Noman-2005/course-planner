@@ -214,8 +214,8 @@ export default function GraduationTracker({ offered = [], added = [], onAddToPla
 
                             <h4>Eligible courses · tap to select</h4>
               <div className="gt-note muted small">
-                <span>✓ Listed because all prerequisites are completed (running courses count as done)</span>
-                <span>⏱ Auto-selected so that no exam times clash. If you pick manually, clashes show in red above</span>
+                <span>✓ Based on prerequisite completion (running courses count as completed)</span>
+                <span>⏱ Auto-picked with no exam clash. If you pick manually, clashes show in red above</span>
               </div>
               {list.length === 0 && (
                 <div className="empty">

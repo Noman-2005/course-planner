@@ -241,7 +241,7 @@ export default function App() {
   const [customRaw, setCustom] = useLocalStorage("cp-custom", []);
   const [picksRaw, setPicks] = useLocalStorage("cp-picks", {});
   const [plansRaw, setPlans] = useLocalStorage("cp-plans", []);
-  const [titleRaw, setTitle] = useLocalStorage("cp-title", "My Semester Routine");
+  
   const [autoModeRaw, setAutoMode] = useLocalStorage("cp-auto-mode", "default");
   const [nameRaw, setProfileName] = useLocalStorage("cp-profile-name", "");
   const profileName = typeof nameRaw === "string" ? nameRaw.replace(/\s+/g, " ").trim().slice(0, 40) : "";
@@ -252,7 +252,7 @@ const autoMode = AUTO_MODES.some((m) => m.id === autoModeRaw) ? autoModeRaw : "d
   const custom = Array.isArray(customRaw) ? customRaw : [];
   const picks = picksRaw && typeof picksRaw === "object" && !Array.isArray(picksRaw) ? picksRaw : {};
   const plans = Array.isArray(plansRaw) ? plansRaw : [];
-  const title = typeof titleRaw === "string" ? titleRaw : "My Semester Routine";
+  const title = profileName || "My Semester Routine";
 
   const base = useMemo(
     () => (catalogRaw && Array.isArray(catalogRaw.courses) && catalogRaw.program === deptId ? catalogRaw : EMPTY),
@@ -668,7 +668,7 @@ function pick(code, sec) {
     setCustom(nextCustom);
     setAdded(nextAdded);
     setPicks(nextPicks);
-    setTitle(shared.title);
+    
     closeShared();
     toast("Routine copied to your planner");
   }
@@ -963,15 +963,7 @@ function pick(code, sec) {
 
         <section className="card routine-card">
           <div className="toolbar">
-            <input
-              className="title-input"
-              value={shownTitle}
-              readOnly={!!shared}
-              maxLength={60}
-              onChange={(e) => setTitle(e.target.value)}
-              aria-label="Routine title"
-              placeholder="My Semester Routine"
-            />
+            
             <div className="tb-btns">
               <button className="btn ghost sm" onClick={() => setShowPlans(true)}>
                 <Icon name="bookmark" size={14} /> Routines ({plans.length})
@@ -1058,7 +1050,7 @@ function pick(code, sec) {
             const codes = Object.keys(p.picks || {});
             setAdded(codes.filter((code) => base.courses.some((c) => c.code === code)));
             setPicks({ ...p.picks });
-            setTitle(p.name);
+            
             if (shared) closeShared();
             setShowPlans(false);
             toast("Routine loaded");

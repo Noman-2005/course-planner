@@ -243,13 +243,17 @@ export function eligible(rec, includeRunning = true) {
   );
 }
 
-// Eligible AND sensible for the student's current stage
+
+// Every eligible course (nothing hidden), core by trimester first
 export function pool(rec) {
+  return eligible(rec).sort((a, b) => (a.tri || 99) - (b.tri || 99));
+}
+
+// Stage-sensible subset: used only for the auto-selection
+function stagePool(rec) {
   const taken = (c) => rec[c.code] && rec[c.code] !== "F";
   const base = Math.min(12, ...COURSES.filter((c) => c.type === "core" && !taken(c)).map((c) => c.tri));
-  return eligible(rec)
-    .filter((c) => (c.type === "core" ? c.tri <= base + 2 : c.type === "ged" || base >= 8))
-    .sort((a, b) => (a.tri || 99) - (b.tri || 99));
+  return pool(rec).filter((c) => (c.type === "core" ? c.tri <= base + 2 : c.type === "ged" || base >= 8));
 }
 
 export function conflicts(codes) {
@@ -268,7 +272,7 @@ export function conflicts(codes) {
 export function suggest(rec, maxCredit = 15, allow = () => true) {
   const picked = [];
   let cr = 0;
-  for (const c of pool(rec)) {
+  for (const c of stagePool(rec)) {
     if (!allow(c)) continue;
     if (cr + c.credit > maxCredit) continue;
     if (conflicts([...picked, c.code]).length) continue;
