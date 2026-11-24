@@ -1975,3 +1975,339 @@ html[data-theme="light"] .uh-n * {
   }
 }
 .gt-note { display: flex; flex-direction: column; gap: 3px; margin: -2px 0 4px; }
+/* ---------- welcome line ---------- */
+.welcome {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  max-width: 100%;
+  margin: 0 0 14px;
+  padding: 8px 18px;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    linear-gradient(115deg, var(--accent), rgba(255, 106, 0, 0.12) 40%, rgba(255, 106, 0, 0.12) 60%, var(--accent)) border-box;
+  box-shadow: 0 10px 28px -14px var(--glow), 0 0 0 5px rgba(255, 106, 0, 0.05);
+  overflow: hidden;
+  animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.welcome b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  background: linear-gradient(90deg, var(--text) 30%, var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.welcome-x {
+  font-weight: 800;
+  color: var(--accent);
+}
+.welcome::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, 0.28) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: welcome-shine 1.6s 0.6s ease-out 1 forwards;
+  pointer-events: none;
+}
+@keyframes welcome-shine {
+  to {
+    transform: translateX(120%);
+  }
+}
+
+/* ---------- sync panel (bottom of the 3-dot menu) ---------- */
+.more-menu:has(.sync.open) {
+  width: min(272px, calc(100vw - 24px));
+}
+.sync {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+  text-align: left;
+}
+.sync-toggle {
+  width: 100%;
+}
+.sync-toggle::after {
+  content: "";
+  margin-left: auto;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 0.2s;
+}
+.sync-toggle[aria-expanded="true"]::after {
+  transform: rotate(225deg) translateY(-2px);
+}
+.sync-body {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 8px 8px 6px;
+  animation: rise 0.18s ease both;
+}
+.sync-label svg {
+  color: var(--accent);
+}
+.sync-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.sync-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 2px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.sync-label em {
+  margin-left: auto;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.sync-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sync-or {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.sync-or::before,
+.sync-or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.sync-create {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  height: 36px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 11px;
+  transition: background 0.15s, transform 0.15s;
+}
+.sync-create:hover {
+  background: var(--glow);
+  transform: translateY(-1px);
+}
+.sync-create:active {
+  transform: scale(0.98);
+}
+
+/* one box style for name / code / restore */
+.sync-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 3px 3px 3px 11px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.sync-box:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--glow);
+}
+.sync-box input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  font-size: 16px; /* stops iOS zoom-on-focus */
+  line-height: 1;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  outline: none;
+}
+.sync-box input[type="text"]::placeholder {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.sync-box input.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.sync-box input.mono::placeholder {
+  font-family: var(--font);
+  letter-spacing: 0;
+}
+.sync-box code {
+  flex: 1;
+  min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: all;
+  -webkit-user-select: all;
+}
+.sync-box.code {
+  background: linear-gradient(120deg, var(--glow), transparent 75%), var(--bg);
+}
+
+/* small square action (tick / copy) inside the box */
+.sync-act {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+}
+.sync-act:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.sync-act.on {
+  color: #fff;
+  background: var(--accent);
+}
+.sync-act.on:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+.sync-act:active:not(:disabled) {
+  transform: scale(0.92);
+}
+.sync-act.done {
+  background: var(--ok);
+}
+
+/* text button inside the box (Sync / Cancel) */
+.sync-go {
+  flex: none;
+  height: 28px;
+  padding: 0 13px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--accent);
+  border: 0;
+  border-radius: 8px;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.sync-go:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+.sync-go:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.sync-go.ghost {
+  color: var(--text);
+  background: var(--line-soft);
+  border: 1px solid var(--line);
+}
+
+.sync-note {
+  margin: 1px 2px 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.sync-err {
+  margin: 0 2px;
+  font-size: 11.5px;
+  color: var(--danger);
+}
+.sync-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 2px;
+}
+.sync-warn {
+  margin: 0 2px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.sync-row {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.sync-remind {
+  margin: 0 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+}
+.sync-out {
+  align-self: flex-start;
+  height: 28px;
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.sync-out:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.sync-go.danger {
+  background: var(--danger);
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome,
+  .welcome::after {
+    animation: none;
+  }
+  .welcome::after {
+    display: none;
+  }
+}

@@ -9,6 +9,8 @@ import { itemsFor } from "./plans.js";
 import { encodeShare, decodeShare } from "./share.js";
 import { findConflicts, overlaps, useLocalStorage, uid, fmt, fmtDur, toMin, slug, HUES } from "./utils.js";
 import CampusHero from "./CampusHero.jsx";
+import SyncPanel from "./SyncPanel.jsx";
+import { startSync } from "./syncClient.js";
 import { playTick, isSoundOn, setSoundOn } from "./sound.js";
 import uiuLogo from "./assets/uiu-logo.png";
 
@@ -241,6 +243,8 @@ export default function App() {
   const [plansRaw, setPlans] = useLocalStorage("cp-plans", []);
   const [titleRaw, setTitle] = useLocalStorage("cp-title", "My Semester Routine");
   const [autoModeRaw, setAutoMode] = useLocalStorage("cp-auto-mode", "default");
+  const [nameRaw, setProfileName] = useLocalStorage("cp-profile-name", "");
+  const profileName = typeof nameRaw === "string" ? nameRaw.replace(/\s+/g, " ").trim().slice(0, 40) : "";
 const autoMode = AUTO_MODES.some((m) => m.id === autoModeRaw) ? autoModeRaw : "default";
 
   const deptId = typeof deptRaw === "string" ? deptRaw : "";
@@ -296,6 +300,17 @@ const autoMode = AUTO_MODES.some((m) => m.id === autoModeRaw) ? autoModeRaw : "d
   const [loadingCat, setLoadingCat] = useState(false);
   const [netErr, setNetErr] = useState("");
   const tRef = useRef(0);
+
+  // device sync: if another device saved newer data, load it once
+  useEffect(() => {
+    let alive = true;
+    startSync().then((applied) => {
+      if (alive && applied) window.location.reload();
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const toast = useCallback((m) => {
     setToastMsg(m);
@@ -679,6 +694,12 @@ function pick(code, sec) {
 
   return (
     <div className="app">
+            {profileName && (
+        <p className="welcome">
+          Welcome, <b>{profileName}</b>
+          <span className="welcome-x">!</span>
+        </p>
+      )}
       <header className="hdr">
                     <div className="brand">
           <div className="logo" aria-hidden="true">
@@ -738,6 +759,7 @@ function pick(code, sec) {
                 >
                   <Icon name="cap" size={16} /> Graduation Tracker
                 </button>
+                <SyncPanel name={nameRaw && typeof nameRaw === "string" ? nameRaw : ""} onName={setProfileName} toast={toast} />
               </div>
             )}
           </div>

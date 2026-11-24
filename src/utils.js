@@ -380,6 +380,7 @@ export function useLocalStorage(key, initial) {
   useEffect(() => {
     try {
       localStorage.setItem(key, JSON.stringify(v));
+      window.dispatchEvent(new Event("cp-local-change")); // lets device sync notice the change
     } catch {}
   }, [key, v]);
 
