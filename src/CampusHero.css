@@ -4,7 +4,7 @@
   position: relative;
   width: 100%;
   aspect-ratio: 1376 / 768;
-  max-height: 480px;
+  /* NO max-height here: on desktop it cropped the top of the scene, which hid the planes, clouds and birds */
   margin-bottom: 16px;
   border-radius: 20px;
   overflow: hidden;
@@ -168,34 +168,35 @@ html[data-theme="dark"] .uh-n { opacity: 1; }
 /* ---------- airplanes (Biman Dreamliner + Saudia 787, taking turns) ---------- */
 
 /*
- * Timing: one full cycle = 120s = two turns of 60s.
- *   - Biman  (plane 1) starts 4s after load, then every 120s
- *   - Saudia (plane 2) starts 60s after Biman (4s + 60s = 64s), then every 120s
- * So the sky shows: Biman -> Saudia -> Biman -> Saudia ...
+ * Timing: each plane flies 28s, then the sky is empty for 30s, then the other plane comes.
+ *   one turn = 28s + 30s = 58s,  full cycle = 2 x 58s = 116s
+ *   - Biman  (plane 1) starts 4s after load, then every 116s
+ *   - Saudia (plane 2) starts 58s after Biman (4s + 58s = 62s), then every 116s
+ * So the sky shows: Biman -> (30s empty) -> Saudia -> (30s empty) -> Biman ...
  *
- * To change the speed: change the cycle (120s) and the Saudia delay together.
- *   cycle = 2 x gap between planes,  Saudia delay = 4s + gap
+ * To change the empty gap: new cycle = 2 x (28 + gap), Saudia delay = 4 + 28 + gap,
+ * and the keyframe percentage = 28 / cycle x 100
  */
 .uh-plane {
   opacity: 0;
-  animation: uh-plane 120s linear 4s infinite;
+  animation: uh-plane 116s linear 4s infinite;
 }
 
 .uh-plane-2 {
-  animation-delay: 64s;
+  animation-delay: 62s;
 }
 
-/* each plane flies for ~28s (23.5% of 120s), then the sky stays empty until the other plane's turn */
+/* each plane flies for 28s (24.1% of 116s), then the sky stays empty for 30s until the other plane comes */
 @keyframes uh-plane {
   0% {
     opacity: 1;
     transform: translate(-220px, 2px);
   }
-  23.5% {
+  24.1% {
     opacity: 1;
     transform: translate(1400px, -4px);
   }
-  23.6%,
+  24.2%,
   100% {
     opacity: 0;
     transform: translate(1400px, -4px);

@@ -1975,57 +1975,95 @@ html[data-theme="light"] .uh-n * {
   }
 }
 .gt-note { display: flex; flex-direction: column; gap: 3px; margin: -2px 0 4px; }
-/* ---------- welcome line ---------- */
+
+/* ---------- welcome capsule · quiet institutional style ----------
+   Replace the WHOLE previous welcome block in src/index.css with this.
+   (Works with the App.jsx you already have: the avatar span and the "!" are hidden here.) */
 .welcome {
   position: relative;
   display: inline-flex;
-  align-items: baseline;
-  gap: 5px;
+  align-items: center;
+  gap: 9px;
   max-width: 100%;
-  margin: 0 0 14px;
-  padding: 8px 18px;
-  font-size: 13.5px;
-  font-weight: 500;
+  margin: 0 0 12px;
+  padding: 5px 15px 5px 12px;
+  font-size: 12.5px;
+  line-height: 1.2;
+  font-weight: 600;
   letter-spacing: 0.01em;
-  color: var(--muted);
-  border: 1px solid transparent;
+  color: var(--text); /* one single text colour */
+  background: var(--card);
+  border: 1px solid var(--line);
   border-radius: 999px;
-  background:
-    linear-gradient(var(--card), var(--card)) padding-box,
-    linear-gradient(115deg, var(--accent), rgba(255, 106, 0, 0.12) 40%, rgba(255, 106, 0, 0.12) 60%, var(--accent)) border-box;
-  box-shadow: 0 10px 28px -14px var(--glow), 0 0 0 5px rgba(255, 106, 0, 0.05);
+  box-shadow: none; /* flat: no glow, no gradient */
   overflow: hidden;
-  animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: welcome-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+/* single small accent mark, flat */
+.welcome::before {
+  content: "";
+  flex: none;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* hide the parts not used in this style */
+.welcome-av,
+.welcome-x {
+  display: none;
+}
+
+/* "Welcome" as a small tracked label, then a hairline divider */
+.welcome-t {
+  font-size: 0; /* hides the original "Welcome," text (with the comma) */
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.welcome-t::before {
+  content: "Welcome";
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: inherit;
+}
+.welcome-t::after {
+  content: "";
+  display: block;
+  width: 1px;
+  height: 11px;
+  margin-left: 9px;
+  background: rgba(128, 128, 128, 0.45);
+}
+
 .welcome b {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  background: linear-gradient(90deg, var(--text) 30%, var(--accent));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: inherit;
 }
-.welcome-x {
-  font-weight: 800;
-  color: var(--accent);
+
+@keyframes welcome-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
-.welcome::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, 0.28) 50%, transparent 65%);
-  transform: translateX(-120%);
-  animation: welcome-shine 1.6s 0.6s ease-out 1 forwards;
-  pointer-events: none;
-}
+
 @keyframes welcome-shine {
   to {
-    transform: translateX(120%);
+    transform: translateX(130%);
   }
 }
 
