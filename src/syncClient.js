@@ -89,12 +89,24 @@ export function createCode() {
   return code;
 }
 
-// Turns sync off for this device. The data stays here; it just stops syncing.
-export function syncOut() {
+// Turns sync off for this device. By default the data stays here and just stops syncing.
+// With { wipe: true } it also removes this device's saved data (the synced copy on the server is untouched).
+export async function syncOut({ wipe = false } = {}) {
   clearTimeout(timer);
+
+  if (wipe && ls.get(K_CODE)) {
+    // make sure the latest local changes are saved to the server first, so nothing is lost
+    const unsaved = Object.keys(snapshot()).length > 0 && hashOf(snapshot()) !== ls.get(K_HASH);
+    if (unsaved) {
+      await push(false);
+      if (hashOf(snapshot()) !== ls.get(K_HASH)) throw new Error("backup failed");
+    }
+  }
+
   ls.del(K_CODE);
   ls.del(K_VER);
   ls.del(K_HASH);
+  if (wipe) for (const k of SYNC_KEYS) ls.del(k);
   setStatus("idle");
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon.jsx";
 import { adoptRemote, createCode, getCode, hasLocalData, lookupCode, normalizeCode, syncOut } from "./syncClient.js";
+import { useEscape } from "./utils.js";
 
 async function copyText(text) {
   try {
@@ -29,7 +30,7 @@ async function copyText(text) {
 
 const cleanName = (s) => String(s || "").replace(/\s+/g, " ").trim().slice(0, 40);
 
-/* "I have a code..." box + Sync button (used before and after sync is turned on) */
+/* "I have a code..." box + Sync button */
 function CodeBox({ ownCode, label }) {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -133,7 +134,7 @@ function NameField({ name, onName, toast }) {
   return (
     <div className="sync-field">
       <span className="sync-label">
-        <Icon name="user" size={12} /> Profile name <em>optional</em>
+        <Icon name="user" size={13} /> Profile name <em>optional</em>
       </span>
       {editing ? (
         <div className="sync-box">
@@ -156,7 +157,7 @@ function NameField({ name, onName, toast }) {
             aria-label="Save name"
             title="Save name"
           >
-            <Icon name="check" size={15} />
+            <Icon name="check" size={16} />
           </button>
         </div>
       ) : (
@@ -172,7 +173,7 @@ function NameField({ name, onName, toast }) {
             aria-label="Edit name"
             title="Edit name"
           >
-            <Icon name="edit" size={14} />
+            <Icon name="edit" size={15} />
           </button>
         </div>
       )}
@@ -180,19 +181,37 @@ function NameField({ name, onName, toast }) {
   );
 }
 
-export default function SyncPanel({ name, onName, toast }) {
-  const [open, setOpen] = useState(false);
+/* Centered sync window (opened from the 3-dot menu) */
+export default function SyncModal({ name, onName, toast, onClose }) {
+  useEscape(onClose);
   const [code, setCode] = useState(() => getCode());
   const [copied, setCopied] = useState(false);
   const [confirmOut, setConfirmOut] = useState(false);
+  const [wipe, setWipe] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [outErr, setOutErr] = useState("");
   const t = useRef(0);
 
   useEffect(() => () => clearTimeout(t.current), []);
 
-  function doSyncOut() {
-    syncOut();
+  async function doSyncOut() {
+    if (busy) return;
+    setBusy(true);
+    setOutErr("");
+    try {
+      await syncOut({ wipe });
+    } catch {
+      setOutErr("Couldn’t back up your latest changes. Check your connection, or untick the delete option.");
+      setBusy(false);
+      return;
+    }
+    if (wipe) {
+      window.location.reload(); // start clean, nothing of the old data stays on screen
+      return;
+    }
     setCode(null);
     setConfirmOut(false);
+    setBusy(false);
     toast("Synced out of this device");
   }
 
@@ -211,75 +230,119 @@ export default function SyncPanel({ name, onName, toast }) {
   }
 
   return (
-    <div className={"sync" + (open ? " open" : "")}>
-      <button
-        type="button"
-        className="more-item sync-toggle"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-      >
-        <Icon name="sync" size={16} /> Sync
-      </button>
-
-      {open && !code && (
-        <div className="sync-body">
-          <p className="sync-note">Keep your routines, plans and progress on every device.</p>
-          <CodeBox ownCode={null} />
-          <div className="sync-or">
-            <span>or</span>
+    <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && !busy && onClose()}>
+      <div className="modal sync-modal" role="dialog" aria-modal="true" aria-label="Device sync">
+        <div className="sm-head">
+          <span className="sm-badge">
+            <Icon name="sync" size={22} />
+          </span>
+          <div className="sm-titles">
+            <h3>Device sync</h3>
+            <p>
+              {code
+                ? "Open your routines, plans and progress on any device."
+                : "Keep your routines, plans and progress on every device."}
+            </p>
           </div>
-          <button type="button" className="sync-create" onClick={generate}>
-            <Icon name="key" size={14} /> Generate a sync code
+          <button type="button" className="icon-btn sm-x" aria-label="Close" onClick={onClose}>
+            <Icon name="close" size={16} />
           </button>
         </div>
-      )}
 
-      {open && code && (
-        <div className="sync-body">
-          <NameField name={name} onName={onName} toast={toast} />
-
-          <div className="sync-field">
-            <span className="sync-label">
-              <Icon name="key" size={12} /> Your sync code
-            </span>
-            <div className="sync-box code">
-              <code translate="no">{code}</code>
-              <button
-                type="button"
-                className={"sync-act on" + (copied ? " done" : "")}
-                onClick={copy}
-                aria-label="Copy sync code"
-                title="Copy code"
-              >
-                <Icon name={copied ? "check" : "copy"} size={14} />
+        <div className="sm-body">
+          {!code ? (
+            <>
+              <span className="sm-status off">
+                <i /> Sync is off on this device
+              </span>
+              <CodeBox ownCode={null} />
+              <div className="sync-or">
+                <span>or</span>
+              </div>
+              <button type="button" className="sync-create" onClick={generate}>
+                <Icon name="key" size={16} /> Generate a sync code
               </button>
-            </div>
-            <p className="sync-note">Use this code on any other device to sync all your routines, plans and progress.</p>
-            <p className="sync-remind">Please save this code for future use.</p>
-          </div>
-
-          {!confirmOut ? (
-            <button type="button" className="sync-out" onClick={() => setConfirmOut(true)}>
-              Sync out
-            </button>
+            </>
           ) : (
-            <div className="sync-confirm">
-              <p className="sync-warn">
-                Sync out of <b>this device</b>? Your data stays here but will stop syncing. Save your code first, you
-                will need it to sync again.
-              </p>
-              <div className="sync-row">
-                <button type="button" className="sync-go ghost" onClick={() => setConfirmOut(false)}>
-                  Cancel
-                </button>
-                <button type="button" className="sync-go danger" onClick={doSyncOut}>
+            <>
+              <span className="sm-status on">
+                <i /> Sync is on
+              </span>
+
+              <NameField name={name} onName={onName} toast={toast} />
+
+              <div className="sync-field">
+                <span className="sync-label">
+                  <Icon name="key" size={13} /> Your sync code
+                </span>
+                <div className="sync-box code">
+                  <code translate="no">{code}</code>
+                  <button
+                    type="button"
+                    className={"sync-act on" + (copied ? " done" : "")}
+                    onClick={copy}
+                    aria-label="Copy sync code"
+                    title="Copy code"
+                  >
+                    <Icon name={copied ? "check" : "copy"} size={16} />
+                  </button>
+                </div>
+                <p className="sync-note">Use this code on any other device to sync all your routines, plans and progress.</p>
+                <p className="sync-remind">Please save this code for future use.</p>
+              </div>
+
+              {!confirmOut ? (
+                <button type="button" className="sm-out" onClick={() => setConfirmOut(true)}>
                   Sync out
                 </button>
-              </div>
-            </div>
+              ) : (
+                <div className="sm-confirm" role="alertdialog" aria-label="Confirm sync out">
+                  <div className="sm-confirm-t">
+                    <Icon name="warn" size={16} /> Sync out of this device?
+                  </div>
+                  <p className="sm-confirm-p">
+                    Your data stays here but will stop syncing. Save your code first, you will need it to sync again.
+                  </p>
+
+                  <div className="sm-actions">
+                    <button
+                      type="button"
+                      className="sm-btn ghost"
+                      disabled={busy}
+                      onClick={() => {
+                        setConfirmOut(false);
+                        setWipe(false);
+                        setOutErr("");
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button type="button" className="sm-btn danger" disabled={busy} onClick={doSyncOut}>
+                      {busy ? "Please wait…" : wipe ? "Sync out & delete" : "Sync out"}
+                    </button>
+                  </div>
+
+                  <label className={"sm-check" + (wipe ? " on" : "")}>
+                    <input type="checkbox" checked={wipe} disabled={busy} onChange={(e) => setWipe(e.target.checked)} />
+                    <span className="sm-box">
+                      <Icon name="check" size={12} />
+                    </span>
+                    <span>Delete all data from this device</span>
+                  </label>
+
+                  {wipe && (
+                    <p className="sm-wipe-note">
+                      All routines, plans and progress on this device will be erased. Your synced copy stays safe and
+                      comes back with your code.
+                    </p>
+                  )}
+                  {outErr && <p className="sync-err">{outErr}</p>}
+                </div>
+              )}
+            </>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

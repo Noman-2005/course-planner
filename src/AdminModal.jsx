@@ -282,10 +282,7 @@ export default function AdminModal({ departments, onClose, onPublished }) {
           <p className="muted small">
             Upload one or more faculty lists (PDF or image). Each file becomes its own list; students pick the list they need from the dropdown.
           </p>
-          <label className="field">
-            <span>Admin password</span>
-            <input type="password" autoComplete="off" value={pw} onChange={(e) => setPw(e.target.value)} />
-          </label>
+          
           <div className="field">
             <span>Faculty list files</span>
             <div className="cat-tools">

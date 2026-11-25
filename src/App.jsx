@@ -9,8 +9,8 @@ import { itemsFor } from "./plans.js";
 import { encodeShare, decodeShare } from "./share.js";
 import { findConflicts, overlaps, useLocalStorage, uid, fmt, fmtDur, toMin, slug, HUES } from "./utils.js";
 import CampusHero from "./CampusHero.jsx";
-import SyncPanel from "./SyncPanel.jsx";
-import { startSync } from "./syncClient.js";
+import SyncModal from "./SyncPanel.jsx";
+import { getCode, startSync } from "./syncClient.js";
 import { playTick, isSoundOn, setSoundOn } from "./sound.js";
 import uiuLogo from "./assets/uiu-logo.png";
 
@@ -278,6 +278,7 @@ const autoMode = AUTO_MODES.some((m) => m.id === autoModeRaw) ? autoModeRaw : "d
   const [showIcs, setShowIcs] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
     const [showGrad, setShowGrad] = useState(false);
+      const [showSync, setShowSync] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -728,15 +729,19 @@ function pick(code, sec) {
             <Icon name={soundOn ? "volume" : "volumeOff"} />
           </button>
 
-          <div className="more" ref={menuRef}>
+                    <div className="more" ref={menuRef}>
             <button
-              className="icon-btn"
+              className="icon-btn more-btn"
               onClick={() => setMenuOpen((o) => !o)}
               aria-label="More options"
               aria-haspopup="menu"
               aria-expanded={menuOpen}
             >
-              <Icon name="more" />
+              <span className="dots" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
             </button>
             {menuOpen && (
               <div className="more-menu" role="menu">
@@ -760,7 +765,17 @@ function pick(code, sec) {
                 >
                   <Icon name="cap" size={16} /> Graduation Tracker
                 </button>
-                <SyncPanel name={nameRaw && typeof nameRaw === "string" ? nameRaw : ""} onName={setProfileName} toast={toast} />
+                <button
+                  className="more-item"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setShowSync(true);
+                  }}
+                >
+                  <Icon name="sync" size={16} /> Sync
+                  {getCode() && <span className="more-badge">On</span>}
+                </button>
               </div>
             )}
           </div>
@@ -1022,6 +1037,14 @@ function pick(code, sec) {
 
       {formFor !== undefined && (
         <CourseForm courses={courses} editing={formFor} onSave={saveCustom} onClose={() => setFormFor(undefined)} />
+      )}
+            {showSync && (
+        <SyncModal
+          name={nameRaw && typeof nameRaw === "string" ? nameRaw : ""}
+          onName={setProfileName}
+          toast={toast}
+          onClose={() => setShowSync(false)}
+        />
       )}
       {showAdmin && (
         <Suspense fallback={null}>
