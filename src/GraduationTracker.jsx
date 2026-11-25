@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import Icon from "./Icon.jsx";
 import { useEscape, useLocalStorage } from "./utils.js";
 import { playTick } from "./sound.js";
@@ -12,7 +12,12 @@ const GROUPS = [
 ];
 
 export default function GraduationTracker({ offered = [], added = [], onAddToPlanner, onClose }) {
-  useEscape(onClose);
+    useEscape(onClose);
+  useEffect(() => {
+    const el = document.documentElement;
+    el.classList.add("gt-open");
+    return () => el.classList.remove("gt-open");
+  }, []);
   const [recRaw, setRec] = useLocalStorage("cp-grad", {});
   const rec = recRaw && typeof recRaw === "object" && !Array.isArray(recRaw) ? recRaw : {};
 
@@ -58,7 +63,8 @@ export default function GraduationTracker({ offered = [], added = [], onAddToPla
 
   const cnt = (t) => Object.keys(rec).filter((c) => BY[c]?.type === t && rec[c] !== "F").length;
   const mine = Object.keys(rec).map((c) => BY[c]).filter(Boolean).sort((a, b) => (a.tri || 99) - (b.tri || 99));
-  const match = (c) => (c.code + " " + c.title).toLowerCase().includes(q.trim().toLowerCase());
+    const dq = useDeferredValue(q);
+  const match = (c) => (c.code + " " + c.title).toLowerCase().includes(dq.trim().toLowerCase());
   const pct = Math.min(100, (stats.earned / TOTAL_CREDITS) * 100);
 
   const picker = (code) => (
@@ -90,7 +96,7 @@ export default function GraduationTracker({ offered = [], added = [], onAddToPla
         onClick={() => setOpen(open === code ? null : code)}
         aria-label={`Change grade for ${code}`}
       >
-        {g === RUNNING ? "Running" : g}
+                {g === RUNNING ? "Running" : GRADES.find((x) => x.l === g)?.gp.toFixed(2) ?? g}
       </button>
     );
   };

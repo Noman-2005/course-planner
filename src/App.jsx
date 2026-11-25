@@ -15,31 +15,17 @@ import { playTick, isSoundOn, setSoundOn } from "./sound.js";
 import uiuLogo from "./assets/uiu-logo.png";
 
 const AdminModal = lazy(() => import("./AdminModal.jsx"));
-const GraduationTracker = lazy(() => import("./GraduationTracker.jsx"));
+const loadGrad = () => import("./GraduationTracker.jsx");
+const GraduationTracker = lazy(loadGrad);
+if (typeof window !== "undefined") {
+  (window.requestIdleCallback || ((fn) => setTimeout(fn, 2500)))(() => loadGrad());
+}
 const EMPTY = { program: "", term: "", courses: [] };
 
 const AUTO_MODES = [
-  {
-    id: "default",
-    icon: null,
-    name: "Smart",
-    sub: "Balanced",
-    hint: "Finds the combinations with the smallest gaps between your classes.",
-  },
-  {
-    id: "morning",
-    icon: "sun",
-    name: "Morning",
-    sub: "from 8:30 AM",
-    hint: "Starts your days at 8:30 AM and stacks classes back-to-back, with gaps kept small.",
-  },
-  {
-    id: "evening",
-    icon: "moon",
-    name: "Evening",
-    sub: "after 12:30 PM",
-    hint: "Keeps classes at 12:30 PM or later, back-to-back, so your mornings stay free.",
-  },
+  { id: "default", icon: "spark", name: "Smart", hint: "Smallest gaps between your classes." },
+  { id: "morning", icon: "sun", name: "Morning", hint: "Classes start from 8:30 AM." },
+  { id: "evening", icon: "moon", name: "Evening", hint: "Classes only after 12:30 PM." },
 ];
 
 /* ---------- Auto plan helpers ---------- */
@@ -684,14 +670,14 @@ function pick(code, sec) {
       : !deptId
       ? "Choose your department"
       : "Add your courses";
-  const emptyText =
+    const emptyText =
     !depts || loadingCat
       ? ""
       : !depts.length
-      ? "The course list has not been published yet. Please check back later."
+      ? "The course list has not been published yet."
       : !deptId
-      ? "Select your department from the menu above."
-      : "Search a course above (for example “CSE 3521” or “database”) and press + Add. Your routine is built from the courses you add.";
+      ? "Select your department above."
+      : "Search by code or name, e.g. CSE 3521.";
 
   return (
     <div className="app">
@@ -835,121 +821,146 @@ function pick(code, sec) {
 
       <main className="layout">
         <aside className="card sidebar">
-          <div className="sb-head">
-            <h2>Courses</h2>
-            <button className="btn primary" onClick={autoPlan} disabled={!myCourses.length}>
-              ✦ Auto plan
+                              <div className="cp-head">
+            <div className="cp-title">
+              <h2>Courses</h2>
+              {myCourses.length > 0 && <span className="cp-count">{myCourses.length}</span>}
+            </div>
+            <button className="btn primary sm cp-generate" onClick={autoPlan} disabled={!myCourses.length}>
+              <Icon name="spark" size={13} /> Auto plan
             </button>
           </div>
 
-          <div className="auto-mode" aria-label="Auto plan priority">
-  {AUTO_MODES.map((m) => (
-    <button
-      key={m.id}
-      type="button"
-      className={"am-opt" + (autoMode === m.id ? " on" : "")}
-      aria-pressed={autoMode === m.id}
-      onClick={() => {
-        setAutoMode(m.id);
-        playTick("select");
-      }}
-    >
-      <span className="am-ico" aria-hidden="true">
-        {m.icon ? <Icon name={m.icon} size={16} /> : "✦"}
-      </span>
-      <span className="am-name">{m.name}</span>
-      <span className="am-sub">{m.sub}</span>
-    </button>
-  ))}
-</div>
-<p className="am-hint" key={autoMode}>
-  {AUTO_MODES.find((m) => m.id === autoMode).hint}
-</p>
+          <div className="cp-auto">
+            <p className="cp-label">
+              <Icon name="spark" size={13} /> Plan style
+            </p>
 
-          <div className="sb-dept">
-            <select
-              aria-label="Department"
-              value={deptId}
-              onChange={(e) => setDeptId(e.target.value)}
-              disabled={!depts || !depts.length}
+            <div
+              className="cp-seg"
+              role="group"
+              aria-label="Auto plan priority"
+              style={{ "--i": Math.max(0, AUTO_MODES.findIndex((m) => m.id === autoMode)) }}
             >
-              <option value="">
-                {depts === null ? "Loading…" : depts.length ? "Select your department…" : "No lists published yet"}
-              </option>
-              {(depts || []).map((d) => (
-                                <option key={d.id} value={d.id}>
-                  {d.term && !d.id.toLowerCase().includes(String(d.term).toLowerCase())
-                    ? `${d.id} · ${d.term}`
-                    : d.id}
-                </option>
+              {AUTO_MODES.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  aria-pressed={autoMode === m.id}
+                  onClick={() => {
+                    setAutoMode(m.id);
+                    playTick("select");
+                  }}
+                >
+                  <Icon name={m.icon} size={14} />
+                  {m.name}
+                </button>
               ))}
-            </select>
+            </div>
+
+                        <p className="cp-hint" key={autoMode}>
+              {AUTO_MODES.find((m) => m.id === autoMode).hint}
+            </p>
+          </div>
+
+          <div className="cp-section">
+            <div className="cp-select-wrap">
+              <select
+                aria-label="Department"
+                value={deptId}
+                onChange={(e) => setDeptId(e.target.value)}
+                disabled={!depts || !depts.length}
+              >
+                <option value="">
+                  {depts === null ? "Loading…" : depts.length ? "Select department" : "No lists published yet"}
+                </option>
+                {(depts || []).map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.term && !d.id.toLowerCase().includes(String(d.term).toLowerCase())
+                      ? `${d.id} · ${d.term}`
+                      : d.id}
+                  </option>
+                ))}
+              </select>
+            </div>
             {meta && (
-              <p className="muted small" style={{ marginTop: 6 }}>
+              <p className="cp-meta">
                 Updated {new Date(meta.updatedAt).toLocaleDateString()} · {meta.count} courses
               </p>
             )}
-          </div>
-          {netErr && (
-            <div className="notice" style={{ marginBottom: 10 }}>
-              {netErr}
-            </div>
-          )}
 
-          {base.courses.length > 0 && (
-            <div className="finder">
-              <input
-                type="search"
-                className="finder-input"
-                placeholder="Search a course to add (code or name)…"
-                aria-label="Search courses to add"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              {query.trim() && (
-                <div className="results">
-                  {results.length === 0 && <p className="muted small" style={{ padding: 8 }}>No course found.</p>}
-                  {results.map((c) => {
-                    const isAdded = addedSet.has(c.code);
-                    return (
-                      <div className="result" key={c.code}>
-                        <div className="result-info">
-                          <b>{c.code}</b>
-                          <span>{c.title}</span>
-                          <em>
-                            {c.credit} cr · {c.sections.length} sections
-                          </em>
-                        </div>
-                        <button className="btn primary sm" onClick={() => addCourse(c.code)} disabled={isAdded}>
-                          {isAdded ? "✓ Added" : "+ Add"}
-                        </button>
-                      </div>
-                    );
-                  })}
+            {netErr && (
+              <div className="notice" style={{ marginTop: 8 }}>
+                {netErr}
+              </div>
+            )}
+
+            {base.courses.length > 0 && (
+              <>
+                <div className="cp-search">
+                  <Icon name="search" size={16} />
+                  <input
+                    type="search"
+                    placeholder="Search by code or name"
+                    aria-label="Search courses to add"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
                 </div>
-              )}
+                {query.trim() && (
+                  <div className="results">
+                    {results.length === 0 && (
+                      <p className="muted small" style={{ padding: 10 }}>
+                        No course found.
+                      </p>
+                    )}
+                    {results.map((c) => {
+                      const isAdded = addedSet.has(c.code);
+                      return (
+                        <div className="result" key={c.code}>
+                          <div className="result-info">
+                            <b>{c.code}</b>
+                            <span>{c.title}</span>
+                            <em>
+                              {c.credit} cr · {c.sections.length} sections
+                            </em>
+                          </div>
+                          <button className="btn primary sm" onClick={() => addCourse(c.code)} disabled={isAdded}>
+                            {isAdded ? "✓ Added" : "+ Add"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="cp-options">
+            <label className="cp-switch">
+              <input type="checkbox" checked={hideClash} onChange={(e) => setHideClash(e.target.checked)} />
+              <span className="track" aria-hidden="true" />
+              Hide clashes
+            </label>
+            <div className="cp-actions">
+              <button className="cp-link" onClick={() => setFormFor(null)}>
+                <Icon name="plus" size={13} /> Custom
+              </button>
+              <button className="cp-link" onClick={() => setPicks({})}>
+                Reset
+              </button>
+              <button className="cp-link danger" onClick={removeAll} disabled={!myCourses.length}>
+                <Icon name="trash" size={13} /> Clear
+              </button>
+            </div>
+          </div>
+
+          {myCourses.length > 0 && (
+            <div className="cp-list-head">
+              <span>My courses</span>
             </div>
           )}
-
-          <div className="sb-row">
-            <label className="check">
-              <input type="checkbox" checked={hideClash} onChange={(e) => setHideClash(e.target.checked)} />
-              <span>Hide clashing sections</span>
-            </label>
-          </div>
-                    <div className="sb-row">
-            <button className="btn ghost sm" onClick={() => setFormFor(null)}>
-              <Icon name="plus" size={14} /> Custom
-            </button>
-            <button className="btn ghost sm" onClick={() => setPicks({})}>
-              Reset
-            </button>
-            <button className="btn ghost sm danger" onClick={removeAll} disabled={!myCourses.length}>
-              <Icon name="trash" size={14} /> Remove all
-            </button>
-          </div>
-
-          {myCourses.length > 0 && <h3 className="my-head">My courses ({myCourses.length})</h3>}
           <div className="course-list">
             {myCourses.map((c, i) => (
               <CourseCard
