@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon.jsx";
 import ReviewPanel from "./ReviewPanel.jsx";
+import HitsCard from "./HitsCard.jsx";
 import { useEscape } from "./utils.js";
 
 const normId = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9_-]+/g, "").slice(0, 20);
@@ -278,7 +279,8 @@ export default function AdminModal({ departments, onClose, onPublished }) {
             <Icon name="close" />
           </button>
         </div>
-        <div className="m-body">
+                <div className="m-body">
+          <HitsCard />
           <p className="muted small">
             Upload one or more faculty lists (PDF or image). Each file becomes its own list; students pick the list they need from the dropdown.
           </p>

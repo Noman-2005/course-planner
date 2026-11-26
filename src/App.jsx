@@ -938,11 +938,17 @@ function pick(code, sec) {
           </div>
 
           <div className="cp-options">
-            <label className="cp-switch">
-              <input type="checkbox" checked={hideClash} onChange={(e) => setHideClash(e.target.checked)} />
-              <span className="track" aria-hidden="true" />
-              Hide clashes
-            </label>
+                        <div className="cp-switch">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={hideClash}
+                aria-label="Hide clashing sections"
+                className="track"
+                onClick={() => setHideClash(!hideClash)}
+              />
+              <span>Hide clashes</span>
+            </div>
             <div className="cp-actions">
               <button className="cp-link" onClick={() => setFormFor(null)}>
                 <Icon name="plus" size={13} /> Custom
@@ -950,8 +956,8 @@ function pick(code, sec) {
               <button className="cp-link" onClick={() => setPicks({})}>
                 Reset
               </button>
-              <button className="cp-link danger" onClick={removeAll} disabled={!myCourses.length}>
-                <Icon name="trash" size={13} /> Clear
+                            <button className="cp-link danger" onClick={removeAll} disabled={!myCourses.length}>
+                <Icon name="trash" size={13} /> Remove all
               </button>
             </div>
           </div>

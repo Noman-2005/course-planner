@@ -156,8 +156,12 @@ export default function GraduationTracker({ offered = [], added = [], onAddToPla
                       {rec[c.code] ? (
                         badge(c.code)
                       ) : (
-                        <button className="btn primary sm" onClick={() => setOpen(open === c.code ? null : c.code)}>
-                          + Add
+                                                <button
+                          className={"btn sm " + (open === c.code ? "ghost" : "primary")}
+                          onClick={() => setOpen(open === c.code ? null : c.code)}
+                          aria-expanded={open === c.code}
+                        >
+                          {open === c.code ? "✕ Cancel" : "+ Add"}
                         </button>
                       )}
                       {open === c.code && picker(c.code)}
