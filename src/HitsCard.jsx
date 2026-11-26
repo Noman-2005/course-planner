@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { fetchHits } from "./hits.js";
-import "./HitsCard.css";
 
 const POLL_MS = 3000; // how often the number is refreshed while this card is on screen
 
