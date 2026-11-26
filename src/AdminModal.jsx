@@ -380,10 +380,7 @@ export default function AdminModal({ departments, onClose, onPublished }) {
             </details>
           )}
         </div>
-        <div className="m-foot">
-          <button className="btn ghost" onClick={onClose} disabled={!!busy}>
-            Close
-          </button>
+                <div className="m-foot">
           <button className="btn primary" onClick={start} disabled={!!busy}>
             Read &amp; review
           </button>
