@@ -42,6 +42,13 @@ html[data-theme="dark"],
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+button:focus:not(:focus-visible),
+[role="switch"]:focus:not(:focus-visible) {
+  outline: none;
 }
 
 html {
@@ -1138,6 +1145,9 @@ html[data-theme] .rt-block.bad {
   font-size: 13px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
   transition: border-color 0.15s, color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.15s;
   transition-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
@@ -1782,7 +1792,7 @@ html[data-theme="light"] .uh-n * {
 .gt-info b { font-size: 14px; }
 .gt-info span { font-size: 12.5px; color: var(--muted); }
 .gt-cr { font-size: 12px; color: var(--muted); }
-.gt-badge { min-width: 46px; padding: 5px 12px; border: 0; border-radius: 999px; font-weight: 700; font-size: 13px; color: #fff; background: linear-gradient(135deg, #ff6a00, #e55f00); }
+.gt-badge { min-width: 46px; padding: 5px 12px; border: 0; border-radius: 999px; font-weight: 700; font-size: 13px; color: #fff; background: linear-gradient(135deg, #ff6a00, #e55f00); -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
 .gt-badge.run { background: #3b82f6; }
 .gt-badge.f { background: var(--danger); }
 .gt-picker { flex-basis: 100%; }
