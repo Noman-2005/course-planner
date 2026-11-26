@@ -1009,11 +1009,8 @@ function pick(code, sec) {
               <button className="btn ghost sm" onClick={() => window.print()}>
                 <Icon name="printer" size={14} /> PDF
               </button>
-              <button className="btn primary sm" onClick={() => savePng("light")}>
-                <Icon name="sun" size={14} /> PNG Light
-              </button>
-              <button className="btn primary sm" onClick={() => savePng("dark")}>
-                <Icon name="moon" size={14} /> PNG Dark
+                            <button className="btn primary sm" onClick={() => savePng(theme)}>
+                <Icon name="download" size={14} /> Download Routine
               </button>
             </div>
           </div>
