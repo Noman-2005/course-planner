@@ -300,8 +300,8 @@ export default function SyncModal({ name, onName, toast, onClose }) {
                   <div className="sm-confirm-t">
                     <Icon name="warn" size={16} /> Sync out of this device?
                   </div>
-                  <p className="sm-confirm-p">
-                    Your data stays here but will stop syncing. Save your code first, you will need it to sync again.
+                                    <p className="sm-confirm-p">
+                    Save your code first, you will need it to sync again.
                   </p>
 
                   <div className="sm-actions">
