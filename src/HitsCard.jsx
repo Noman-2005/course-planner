@@ -54,33 +54,15 @@ export default function HitsCard() {
     return () => clearTimeout(t);
   }, [bump]);
 
-    return (
+      return (
     <div className="hc">
-      <span className="hc-ico" aria-hidden="true">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 17l6-6 4 4 8-8" />
-          <path d="M15 7h6v6" />
-        </svg>
-      </span>
-
-      <div className="hc-main">
+      <div className="hc-top">
         <span className="hc-l">Total hits</span>
-        <span className="hc-v" key={total}>
-          {total === null ? "—" : total.toLocaleString("en-US")}
-        </span>
+        <i className={"hc-dot" + (live ? "" : " off")} aria-hidden="true" />
       </div>
-
-      <div className="hc-side">
-        {bump && (
-          <span className="hc-plus" key={bump.id}>
-            +{bump.n}
-          </span>
-        )}
-        <span className={"hc-live" + (live ? "" : " off")}>
-          <i aria-hidden="true" />
-          {live ? "Live" : "Offline"}
-        </span>
-      </div>
+      <span className="hc-v" key={total}>
+        {total === null ? "—" : total.toLocaleString("en-US")}
+      </span>
     </div>
   );
 }
