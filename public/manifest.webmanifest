@@ -1,6 +1,6 @@
 {
   "name": "Course Planner & Routine Maker",
-  "short_name": "Routine Maker",
+  "short_name": "Course Planner",
   "description": "Plan your courses and build your class routine.",
   "start_url": "/",
   "scope": "/",
